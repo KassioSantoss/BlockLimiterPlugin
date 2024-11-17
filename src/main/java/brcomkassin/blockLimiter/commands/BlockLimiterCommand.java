@@ -1,6 +1,7 @@
-package brcomkassin.blockLimiter;
+package brcomkassin.blockLimiter.commands;
 
-import brcomkassin.BlockLimiterPlugin;
+import brcomkassin.blockLimiter.inventory.LimiterInventory;
+import brcomkassin.blockLimiter.limiter.BlockLimiter;
 import brcomkassin.utils.Message;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -9,12 +10,12 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
+import java.sql.SQLException;
 
 public class BlockLimiterCommand implements CommandExecutor {
-
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
-        if (!(sender instanceof Player player)) return false;
+        if (!(sender instanceof Player player)) return true;
 
         ItemStack itemInHand = player.getInventory().getItemInMainHand();
 
@@ -24,7 +25,7 @@ public class BlockLimiterCommand implements CommandExecutor {
         }
 
         if (args[0].equalsIgnoreCase("open")) {
-            BlockLimiter.openInventory(player);
+            LimiterInventory.openInventory(player);
             return true;
         }
 
@@ -41,8 +42,9 @@ public class BlockLimiterCommand implements CommandExecutor {
             Message.Chat.send(player, "&4Você deve passar um valor como parâmetro!");
             Message.Chat.send(player, "&4Uso correto: /limitar <valor>");
             return true;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
-
         return false;
     }
 }

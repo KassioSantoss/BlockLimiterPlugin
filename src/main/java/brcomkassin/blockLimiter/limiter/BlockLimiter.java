@@ -1,11 +1,9 @@
-package brcomkassin.blockLimiter;
+package brcomkassin.blockLimiter.limiter;
 
-import brcomkassin.utils.ItemBuilder;
+import brcomkassin.blockLimiter.inventory.LimiterInventory;
 import brcomkassin.utils.Message;
-import brcomkassin.utils.SQLiteManager;
-import org.bukkit.Bukkit;
+import brcomkassin.database.SQLiteManager;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,9 +12,7 @@ import java.util.UUID;
 
 public class BlockLimiter {
 
-    private final static Inventory INVENTORY = Bukkit.createInventory(null, 54, "Limites de Blocos");
-
-    public static void addLimitedBlock(Player player, ItemStack itemStack, int limit) {
+    public static void addLimitedBlock(Player player, ItemStack itemStack, int limit) throws SQLException {
         String itemId = itemStack.getType().name();
 
         if (isLimitedBlock(itemId)) {
@@ -25,12 +21,12 @@ public class BlockLimiter {
         }
 
         saveBlockLimit(itemId, limit);
-        int playerCount = getBlockCount(player.getUniqueId(), itemId);
-        addItemInInventory(itemStack, playerCount, limit);
+        int playerCount = getBlockCount(player, itemId);
+        LimiterInventory.addItemInInventory(itemStack, playerCount, limit);
         Message.Chat.send(player, "&aO item foi limitado em &6" + limit + " &ausos!");
     }
 
-    public static boolean isLimitedBlock(String itemId) {
+    public static boolean isLimitedBlock(String itemId) throws SQLException {
         String query = "SELECT 1 FROM block_limit WHERE item_id = ?";
         try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
             ps.setString(1, itemId);
@@ -39,60 +35,48 @@ public class BlockLimiter {
             }
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new SQLException("Houve um problema desconhecido na hora de limitar a quantidade de uso do bloco: " + itemId);
         }
-        return false;
     }
 
-    public static boolean reachedTheLimit(Player player,ItemStack itemStack){
-        String itemId = itemStack.getType().name();
+    public static boolean reachedTheLimit(Player player, String itemId) throws SQLException {
         UUID playerId = player.getUniqueId();
         int limit = getBlockLimit(itemId);
-        int currentCount = getBlockCount(playerId, itemId);
+        int currentCount = getBlockCount(player, itemId);
         return currentCount >= limit;
     }
 
-    public static void incrementBlockCount(Player player, ItemStack itemStack) {
-        String itemId = itemStack.getType().name();
-
-        if (!isLimitedBlock(itemId)) {
+    public static void incrementBlockCount(Player player, String itemID) throws SQLException {
+        if (!isLimitedBlock(itemID)) {
             return;
         }
 
         UUID playerId = player.getUniqueId();
+        int limit = getBlockLimit(itemID);
+        int currentCount = getBlockCount(player, itemID);
+
+        saveBlockCount(playerId, itemID, currentCount + 1);
+        int updatedCount = getBlockCount(player, itemID);
+        LimiterInventory.updateInventory(itemID, updatedCount, limit);
+    }
+
+    public static void decrementBlockCount(Player player, String itemId) throws SQLException {
+        UUID playerId = player.getUniqueId();
+
         int limit = getBlockLimit(itemId);
-        int currentCount = getBlockCount(playerId, itemId);
+        int currentCount = getBlockCount(player, itemId);
 
-        saveBlockCount(playerId, itemId, currentCount + 1);
-        int updatedCount = getBlockCount(playerId, itemId);
-        updateInventory(itemId, updatedCount, limit);
-    }
-
-    private static void addItemInInventory(ItemStack itemStack, int playerCount, int limit) {
-        ItemStack build = ItemBuilder.of(itemStack)
-                .setLore("&6Uso: &a" + playerCount + " &6| &4" + limit)
-                .build();
-        INVENTORY.addItem(build);
-    }
-
-    public static void updateInventory(String itemId, int playerCount, int limit) {
-        for (int i = 0; i < INVENTORY.getSize(); i++) {
-            ItemStack item = INVENTORY.getItem(i);
-
-            if (item == null || !item.getType().name().equals(itemId)) continue;
-
-            ItemStack updatedItem = ItemBuilder.of(item)
-                    .setLore("&6Uso: &a" + playerCount + " &6| &4" + limit)
-                    .build();
-            INVENTORY.setItem(i, updatedItem);
+        if (!isLimitedBlock(itemId)) {
+            return;
         }
+        if (currentCount == 0) return;
+
+        saveBlockCount(playerId, itemId, currentCount - 1);
+        int updatedCount = getBlockCount(player, itemId);
+        LimiterInventory.updateInventory(itemId, updatedCount, limit);
     }
 
-    public static void openInventory(Player player) {
-        player.openInventory(INVENTORY);
-    }
-
-    private static void saveBlockLimit(String itemId, int limit) {
+    private static void saveBlockLimit(String itemId, int limit) throws SQLException {
         String query = "INSERT OR REPLACE INTO block_limit (item_id, block_limit_value) VALUES (?, ?)";
         try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
             ps.setString(1, itemId);
@@ -100,11 +84,11 @@ public class BlockLimiter {
             ps.executeUpdate();
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new SQLException("Houve um problema desconhecido na hora de salvar os limites de blocos.");
         }
     }
 
-    private static int getBlockLimit(String itemId) {
+    private static int getBlockLimit(String itemId) throws SQLException {
         String query = "SELECT block_limit_value FROM block_limit WHERE item_id = ?";
         try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
             ps.setString(1, itemId);
@@ -115,12 +99,12 @@ public class BlockLimiter {
             }
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new SQLException("Houve um problema desconhecido na hora de retornar o valor correspondente ao limite de blocos.");
         }
         return 0;
     }
 
-    private static void saveBlockCount(UUID playerId, String itemId, int count) {
+    private static void saveBlockCount(UUID playerId, String itemId, int count) throws SQLException {
         String query = "INSERT OR REPLACE INTO block_count (player_uuid, item_id, count) VALUES (?, ?, ?)";
         try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
             ps.setString(1, playerId.toString());
@@ -129,12 +113,13 @@ public class BlockLimiter {
             ps.executeUpdate();
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new SQLException("Houve um problema desconhecido na hora salvar o uso de blocos no banco de dados.");
         }
     }
 
-    private static int getBlockCount(UUID playerId, String itemId) {
+    private static int getBlockCount(Player player, String itemId) throws SQLException {
         String query = "SELECT count FROM block_count WHERE player_uuid = ? AND item_id = ?";
+        UUID playerId = player.getUniqueId();
         try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
             ps.setString(1, playerId.toString());
             ps.setString(2, itemId);
@@ -145,7 +130,7 @@ public class BlockLimiter {
             }
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new SQLException("Houve um problema desconhecido na hora de retornar o valor correspondente ao uso de blocos do jogador: " + player.getName());
         }
         return 0;
     }

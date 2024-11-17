@@ -1,4 +1,4 @@
-package brcomkassin.utils;
+package brcomkassin.database;
 
 import lombok.Getter;
 
@@ -7,23 +7,25 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+
 public class SQLiteManager {
 
     @Getter
     private static Connection connection;
 
-    public static void connect() {
+    public static void connectAndCreateTables() {
         try {
-            if (connection == null || connection.isClosed()) {
-                File databaseFile = new File("plugins/BlockLimiter/data.db");
-                if (!databaseFile.exists()) {
-                    databaseFile.getParentFile().mkdirs();
-                }
+            if (connection != null) return;
 
-                String url = "jdbc:sqlite:" + databaseFile.getPath();
-                connection = DriverManager.getConnection(url);
-                System.out.println("Conectado ao SQLite!");
+            File databaseFile = new File("plugins/BlockLimiter/data.db");
+
+            if (!databaseFile.exists()) {
+                databaseFile.getParentFile().mkdirs();
             }
+            String url = "jdbc:sqlite:" + databaseFile.getPath();
+            connection = DriverManager.getConnection(url);
+            createTables();
+            System.out.println("Conectado ao SQLite!");
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -41,15 +43,9 @@ public class SQLiteManager {
     }
 
     public static void createTables() {
-        String createBlockLimitTable = "CREATE TABLE IF NOT EXISTS block_limit (" +
-                "item_id TEXT PRIMARY KEY, " +
-                "block_limit_value INTEGER NOT NULL)";
+        String createBlockLimitTable = SQLiteType.BLOCK_LIMIT_TABLE.getString();
 
-        String createBlockCountTable = "CREATE TABLE IF NOT EXISTS block_count (" +
-                "player_uuid TEXT, " +
-                "item_id TEXT, " +
-                "count INTEGER NOT NULL, " +
-                "PRIMARY KEY (player_uuid, item_id))";
+        String createBlockCountTable = SQLiteType.BLOCK_COUNT_TABLE.getString();
 
         try (PreparedStatement ps1 = connection.prepareStatement(createBlockLimitTable);
              PreparedStatement ps2 = connection.prepareStatement(createBlockCountTable)) {

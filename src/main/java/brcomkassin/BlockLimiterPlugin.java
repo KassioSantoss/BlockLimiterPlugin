@@ -1,19 +1,22 @@
 package brcomkassin;
 
-import brcomkassin.blockLimiter.BlockLimiterCommand;
-import brcomkassin.blockLimiter.BlockPlaceListener;
-import brcomkassin.utils.SQLiteManager;
+import brcomkassin.blockLimiter.commands.BlockLimiterCommand;
+import brcomkassin.blockLimiter.listeners.BlockBreakListener;
+import brcomkassin.blockLimiter.listeners.BlockPlaceListener;
+import brcomkassin.blockLimiter.listeners.InventoryClickListener;
+import brcomkassin.database.SQLiteManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class BlockLimiterPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        SQLiteManager.connect();
-        SQLiteManager.createTables();
+        SQLiteManager.connectAndCreateTables();
 
         getCommand("limiter").setExecutor(new BlockLimiterCommand());
         getServer().getPluginManager().registerEvents(new BlockPlaceListener(), this);
+        getServer().getPluginManager().registerEvents(new BlockBreakListener(),this);
+        getServer().getPluginManager().registerEvents(new InventoryClickListener(),this);
     }
 
     @Override
