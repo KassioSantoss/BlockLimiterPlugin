@@ -5,7 +5,7 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public enum SQLiteType {
+public enum SQLiteQueries  {
 
     BLOCK_LIMIT_TABLE("CREATE TABLE IF NOT EXISTS block_count (" +
             "player_uuid TEXT, " +

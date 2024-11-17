@@ -43,9 +43,9 @@ public class SQLiteManager {
     }
 
     public static void createTables() {
-        String createBlockLimitTable = SQLiteType.BLOCK_LIMIT_TABLE.getString();
+        String createBlockLimitTable = SQLiteQueries.BLOCK_LIMIT_TABLE.getString();
 
-        String createBlockCountTable = SQLiteType.BLOCK_COUNT_TABLE.getString();
+        String createBlockCountTable = SQLiteQueries.BLOCK_COUNT_TABLE.getString();
 
         try (PreparedStatement ps1 = connection.prepareStatement(createBlockLimitTable);
              PreparedStatement ps2 = connection.prepareStatement(createBlockCountTable)) {

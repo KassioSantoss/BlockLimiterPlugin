@@ -3,6 +3,7 @@ package brcomkassin.blockLimiter.limiter;
 import brcomkassin.blockLimiter.inventory.LimiterInventory;
 import brcomkassin.utils.Message;
 import brcomkassin.database.SQLiteManager;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import java.sql.PreparedStatement;
@@ -15,6 +16,11 @@ public class BlockLimiter {
     public static void addLimitedBlock(Player player, ItemStack itemStack, int limit) throws SQLException {
         String itemId = itemStack.getType().name();
 
+        if (player.getInventory().getItemInMainHand().getType() == Material.AIR) {
+            Message.Chat.send(player,
+                    "&4Você precisa está segurando um item na mão para usar o comando!");
+            return;
+        }
         if (isLimitedBlock(itemId)) {
             Message.Chat.send(player, "&4O item já está limitado!");
             return;
@@ -88,7 +94,31 @@ public class BlockLimiter {
         }
     }
 
-    private static int getBlockLimit(String itemId) throws SQLException {
+    public static void removeBlockLimit(Player player) throws SQLException {
+        ItemStack itemInHand = player.getInventory().getItemInMainHand();
+
+        if (itemInHand.getType() == Material.AIR) {
+            player.sendMessage("§cVocê não está segurando nenhum item válido.");
+            return;
+        }
+        String itemId = itemInHand.getType().name();
+
+        if (!isLimitedBlock(itemId)) {
+            player.sendMessage("§cEste item não possui um limite definido.");
+            return;
+        }
+        String query = "DELETE FROM block_limit WHERE item_id = ?";
+        try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
+            ps.setString(1, itemId);
+            ps.executeUpdate();
+            player.sendMessage("§aO limite do item " + itemId + " foi removido com sucesso.");
+            LimiterInventory.removeItemInInventory(itemInHand);
+        } catch (SQLException e) {
+            throw new SQLException("Houve um problema desconhecido ao remover o limite do bloco.");
+        }
+    }
+
+    public static int getBlockLimit(String itemId) throws SQLException {
         String query = "SELECT block_limit_value FROM block_limit WHERE item_id = ?";
         try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
             ps.setString(1, itemId);
@@ -117,7 +147,7 @@ public class BlockLimiter {
         }
     }
 
-    private static int getBlockCount(Player player, String itemId) throws SQLException {
+    public static int getBlockCount(Player player, String itemId) throws SQLException {
         String query = "SELECT count FROM block_count WHERE player_uuid = ? AND item_id = ?";
         UUID playerId = player.getUniqueId();
         try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
@@ -134,4 +164,5 @@ public class BlockLimiter {
         }
         return 0;
     }
+
 }
