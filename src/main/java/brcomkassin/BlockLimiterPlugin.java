@@ -15,7 +15,6 @@ public final class BlockLimiterPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         SQLiteManager.connectAndCreateTables();
-        LimiterInventory.initializeInventory();
 
         getCommand("limiter").setExecutor(new BlockLimiterCommand());
         getServer().getPluginManager().registerEvents(new BlockPlaceListener(), this);
