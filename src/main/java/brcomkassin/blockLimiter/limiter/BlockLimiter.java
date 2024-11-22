@@ -13,9 +13,13 @@ import org.bukkit.inventory.ItemStack;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 public class BlockLimiter {
+
+    public static final List<String> CONFIGURATOR_BLOCKS = new ArrayList<>();
 
     public static void addLimitedBlock(Player player, ItemStack itemStack, int limit) throws SQLException {
         String itemId = itemStack.getType().name();

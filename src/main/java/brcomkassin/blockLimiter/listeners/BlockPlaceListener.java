@@ -16,6 +16,8 @@ public class BlockPlaceListener implements Listener {
         String itemID = event.getItemInHand().getType().name();
         Player player = event.getPlayer();
 
+        if (player.hasPermission("limites.bypass")) return;
+
         if (!BlockLimiter.isLimitedBlock(itemID)) return;
 
         if (BlockLimiter.reachedTheLimit(player, itemID)) {

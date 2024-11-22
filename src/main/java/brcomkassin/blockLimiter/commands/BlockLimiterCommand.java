@@ -44,6 +44,10 @@ public class BlockLimiterCommand implements CommandExecutor, TabExecutor {
                 try {
                     int limit = Integer.parseInt(args[1]);
                     BlockLimiter.addLimitedBlock(player, itemInHand, limit);
+                    if (args.length >= 3) {
+                        BlockLimiter.CONFIGURATOR_BLOCKS.add(itemInHand.getType().name());
+                        Message.Chat.send(player, "&aO bloco foi adicionado ao CONFIGURATOR com o limite definido!");
+                    }
                 } catch (NumberFormatException e) {
                     Message.Chat.send(player, "&4Você deve passar um valor como parâmetro!");
                     Message.Chat.send(player, "&4Uso correto: /limites add <valor>");

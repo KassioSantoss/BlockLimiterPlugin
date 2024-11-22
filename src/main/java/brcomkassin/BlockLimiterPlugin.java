@@ -7,6 +7,7 @@ import brcomkassin.blockLimiter.listeners.BlockInteractListener;
 import brcomkassin.blockLimiter.listeners.BlockPlaceListener;
 import brcomkassin.blockLimiter.listeners.InventoryClickListener;
 import brcomkassin.database.SQLiteManager;
+import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class BlockLimiterPlugin extends JavaPlugin {
@@ -17,15 +18,21 @@ public final class BlockLimiterPlugin extends JavaPlugin {
         LimiterInventory.initializeInventory();
 
         getCommand("limites").setExecutor(new BlockLimiterCommand());
-        getServer().getPluginManager().registerEvents(new BlockPlaceListener(), this);
-        getServer().getPluginManager().registerEvents(new BlockInteractListener(), this);
-        getServer().getPluginManager().registerEvents(new BlockBreakListener(), this);
-        getServer().getPluginManager().registerEvents(new InventoryClickListener(), this);
+        registerListeners(new BlockPlaceListener(),
+                new BlockInteractListener(),
+                new BlockBreakListener(),
+                new InventoryClickListener());
     }
 
     @Override
     public void onDisable() {
         SQLiteManager.disconnect();
+    }
+
+    private void registerListeners(Listener... listeners) {
+        for (Listener listener : listeners) {
+            getServer().getPluginManager().registerEvents(listener, this);
+        }
     }
 
     public static BlockLimiterPlugin getInstance() {
