@@ -3,9 +3,13 @@ package brcomkassin.blockLimiter.limiter;
 import brcomkassin.blockLimiter.inventory.LimiterInventory;
 import brcomkassin.utils.Message;
 import brcomkassin.database.SQLiteManager;
+import org.bukkit.BanList;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -28,7 +32,7 @@ public class BlockLimiter {
 
         saveBlockLimit(itemId, limit);
         int playerCount = getBlockCount(player, itemId);
-        LimiterInventory.addItemInInventory(itemStack, playerCount, limit);
+        LimiterInventory.addItemInInventory(itemId, playerCount, limit);
         Message.Chat.send(player, "&aO item foi limitado em &6" + limit + " &ausos!");
     }
 
@@ -49,7 +53,22 @@ public class BlockLimiter {
         UUID playerId = player.getUniqueId();
         int limit = getBlockLimit(itemId);
         int currentCount = getBlockCount(player, itemId);
-        return currentCount >= limit;
+        return currentCount == limit;
+    }
+
+    public static void punished(Player player, String itemId) throws SQLException {
+        UUID playerId = player.getUniqueId();
+        int limit = getBlockLimit(itemId);
+        int currentCount = getBlockCount(player, itemId);
+
+        if (currentCount > limit) {
+            executeCommand("ban " + player.getName() + " §4Você foi banido por burlar o limite de blocos.");
+        }
+    }
+
+    public static void executeCommand(String command) {
+        ConsoleCommandSender console = Bukkit.getConsoleSender();
+        Bukkit.dispatchCommand(console, command);
     }
 
     public static void incrementBlockCount(Player player, String itemID) throws SQLException {
@@ -63,7 +82,6 @@ public class BlockLimiter {
 
         saveBlockCount(playerId, itemID, currentCount + 1);
         int updatedCount = getBlockCount(player, itemID);
-        LimiterInventory.updateInventory(itemID, updatedCount, limit);
     }
 
     public static void decrementBlockCount(Player player, String itemId) throws SQLException {
@@ -79,7 +97,6 @@ public class BlockLimiter {
 
         saveBlockCount(playerId, itemId, currentCount - 1);
         int updatedCount = getBlockCount(player, itemId);
-        LimiterInventory.updateInventory(itemId, updatedCount, limit);
     }
 
     private static void saveBlockLimit(String itemId, int limit) throws SQLException {

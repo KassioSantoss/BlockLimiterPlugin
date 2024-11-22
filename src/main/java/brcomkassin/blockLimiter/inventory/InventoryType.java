@@ -7,7 +7,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum InventoryType {
 
-    LIMITER("§6Limites de Itens",54);
+    LIMITER("Limite de Itens",54);
 
     private final String name;
     private final int size;

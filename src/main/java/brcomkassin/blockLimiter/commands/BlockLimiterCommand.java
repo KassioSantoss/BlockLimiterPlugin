@@ -7,11 +7,16 @@ import lombok.SneakyThrows;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 
-public class BlockLimiterCommand implements CommandExecutor {
+public class BlockLimiterCommand implements CommandExecutor, TabExecutor {
+
     @SneakyThrows
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
@@ -19,30 +24,57 @@ public class BlockLimiterCommand implements CommandExecutor {
 
         ItemStack itemInHand = player.getInventory().getItemInMainHand();
 
-        if (args.length < 1) {
-            Message.Chat.send(player, "&4Uso correto: /limiter <value>");
-            return false;
+        if (args.length == 0) {
+            LimiterInventory.openInventory(player);
+            return true;
+        }
+
+        if (!player.hasPermission("limiter.perm")) {
+            Message.Chat.send(player, "&4Você não tem permissão para usar esse comando.");
+            return true;
         }
 
         switch (args[0]) {
-            case "open":
-                LimiterInventory.openInventory(player);
+            case "add":
+                if (args.length < 2) {
+                    Message.Chat.send(player, "&4Você deve passar um valor como parâmetro!");
+                    Message.Chat.send(player, "&4Uso correto: /limites add <valor>");
+                    return true;
+                }
+                try {
+                    int limit = Integer.parseInt(args[1]);
+                    BlockLimiter.addLimitedBlock(player, itemInHand, limit);
+                } catch (NumberFormatException e) {
+                    Message.Chat.send(player, "&4Você deve passar um valor como parâmetro!");
+                    Message.Chat.send(player, "&4Uso correto: /limites add <valor>");
+                }
                 break;
-            case "remove":
+            case "remover":
                 BlockLimiter.removeBlockLimit(player);
                 break;
-            case "open1":
-                LimiterInventory.open(player);
-                break;
             default:
-                try {
-                    int limit = Integer.parseInt(args[0]);
-                    BlockLimiter.addLimitedBlock(player, itemInHand, limit);
-                } catch (IllegalArgumentException e) {
-                    Message.Chat.send(player, "&4Você deve passar um valor como parâmetro!");
-                    Message.Chat.send(player, "&4Uso correto: /limitar <valor>");
-                }
+                Message.Chat.send(player, "&4Uso correto: /limites <add>, <remove>");
         }
         return false;
+    }
+
+    @Override
+    public @Nullable List<String> onTabComplete(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String arg, @NotNull String[] args) {
+        if (!(commandSender instanceof Player player)) {
+            return null;
+        }
+
+        if (!player.hasPermission("limiter.perm")) {
+            return List.of();
+        }
+
+        List<String> strings = new ArrayList<>();
+
+        if (args.length == 1) {
+            strings.add("add");
+            strings.add("remover");
+            return strings;
+        }
+        return List.of();
     }
 }

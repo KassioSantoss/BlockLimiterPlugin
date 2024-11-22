@@ -46,7 +46,7 @@
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>2.3.1</version>
                 <configuration>
-                    <outputDirectory>K:\Todos da area de trabalho\SERVIDOR PAPER 1.20.1\plugins</outputDirectory>
+                    <outputDirectory>K:\Todos da area de trabalho\servidor com mods 1.20.1\plugins</outputDirectory>
                 </configuration>
             </plugin>
         </plugins>

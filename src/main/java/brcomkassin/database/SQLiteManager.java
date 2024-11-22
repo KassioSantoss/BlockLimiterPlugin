@@ -52,7 +52,6 @@ public class SQLiteManager {
 
             ps1.executeUpdate();
             ps2.executeUpdate();
-            System.out.println("Tabelas criadas com sucesso!");
 
         } catch (SQLException e) {
             e.printStackTrace();

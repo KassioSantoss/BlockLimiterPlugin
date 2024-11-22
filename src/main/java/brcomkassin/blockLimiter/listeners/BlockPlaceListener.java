@@ -19,7 +19,16 @@ public class BlockPlaceListener implements Listener {
         if (!BlockLimiter.isLimitedBlock(itemID)) return;
 
         if (BlockLimiter.reachedTheLimit(player, itemID)) {
-            Message.Chat.send(player, "&4&lVocê já atingiu o limite para este bloco: &4" + itemID);
+            Message.Chat.send(player, "&f[&2&lDuende Magnata&f]: &eVocê atingiu o limite máximo definido para este bloco, digite &c/limites &epara conferir as restrições.");
+            event.setCancelled(true);
+            return;
+        }
+
+        int playerCount = BlockLimiter.getBlockCount(player, itemID);
+        int limit = BlockLimiter.getBlockLimit(itemID);
+
+        if (playerCount > limit) {
+            BlockLimiter.punished(player, itemID);
             event.setCancelled(true);
             return;
         }
