@@ -1,20 +1,20 @@
 package brcomkassin.blockLimiter.listeners;
 
-import brcomkassin.blockLimiter.inventory.InventoryType;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.inventory.InventoryView;
+
+import brcomkassin.blockLimiter.inventory.InventoryType;
+import brcomkassin.blockLimiter.inventory.LimiterInventory;
+import net.kyori.adventure.text.Component;
 
 public class InventoryClickListener implements Listener {
 
     @EventHandler
     public void onClick(InventoryClickEvent event) {
-        InventoryView view = event.getView();
-        Player player = (Player) event.getWhoClicked();
-        if (!view.getTitle().equalsIgnoreCase(InventoryType.LIMITER.getName())) return;
+        if (!event.getView().title().equals(Component.text(InventoryType.LIMITER.getName()))) return;
+        
         event.setCancelled(true);
+        LimiterInventory.handleInventoryClick(event);
     }
-
 }

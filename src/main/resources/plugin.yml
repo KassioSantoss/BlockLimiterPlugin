@@ -2,5 +2,27 @@ name: BlockLimiterPlugin
 version: '1.0'
 main: brcomkassin.BlockLimiterPlugin
 api-version: '1.20'
+description: 'Plugin para limitar a quantidade de blocos que um jogador pode colocar'
+author: Kassin
+
 commands:
   limites:
+    description: 'Comando principal para gerenciar os limites de blocos'
+    usage: '§cUso correto: /limites'
+    aliases: [blocklimiter, bl]
+
+permissions:
+  limites.*:
+    description: 'Dá acesso a todos os comandos do plugin'
+    default: op
+    children:
+      limites.bypass: true
+      limites.perm: true
+  
+  limites.bypass:
+    description: 'Permite ignorar os limites de blocos'
+    default: op
+  
+  limites.perm:
+    description: 'Permite usar os comandos administrativos do plugin'
+    default: op
