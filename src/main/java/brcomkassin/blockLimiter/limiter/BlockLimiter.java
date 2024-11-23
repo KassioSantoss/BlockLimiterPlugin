@@ -19,8 +19,8 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 
-import brcomkassin.database.SQLiteManager;
 import brcomkassin.blockLimiter.inventory.LimiterInventory;
+import brcomkassin.database.SQLiteManager;
 
 public class BlockLimiter {
     private static final Logger LOGGER = Logger.getLogger("BlockLimiter");
@@ -425,6 +425,43 @@ public class BlockLimiter {
         }
         
         LOGGER.log(Level.INFO, "Carregados {0} grupos com suas configura\u00e7\u00f5es", blockGroups.size());
+    }
+
+    public static void removeBlockIfExists(Location location) {
+        if (isBlockRegistered(location)) {
+            removeBlockFromDatabase(location);
+        }
+    }
+
+    public static boolean isBlockRegistered(Location location) {
+        String query = "SELECT COUNT(*) as count FROM placed_blocks WHERE world = ? AND x = ? AND y = ? AND z = ?";
+        try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
+            ps.setString(1, location.getWorld().getName());
+            ps.setInt(2, location.getBlockX());
+            ps.setInt(3, location.getBlockY());
+            ps.setInt(4, location.getBlockZ());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("count") > 0;
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Erro ao verificar bloco registrado", e);
+        }
+        return false;
+    }
+
+    private static void removeBlockFromDatabase(Location location) {
+        String query = "DELETE FROM placed_blocks WHERE world = ? AND x = ? AND y = ? AND z = ?";
+        try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
+            ps.setString(1, location.getWorld().getName());
+            ps.setInt(2, location.getBlockX());
+            ps.setInt(3, location.getBlockY());
+            ps.setInt(4, location.getBlockZ());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Erro ao remover bloco do banco de dados", e);
+        }
     }
 
 }

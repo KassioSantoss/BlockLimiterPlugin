@@ -1,5 +1,8 @@
 package brcomkassin.blockLimiter.listeners;
 
+import java.util.logging.Level;
+
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -7,6 +10,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
 
+import brcomkassin.BlockLimiterPlugin;
 import brcomkassin.blockLimiter.limiter.BlockLimiter;
 import brcomkassin.config.ConfigManager;
 import brcomkassin.utils.Message;
@@ -21,14 +25,27 @@ public class BlockInteractListener implements Listener {
         Player player = event.getPlayer();
 
         if (block == null || block.getType() == Material.AIR) return;
-
         if (!BlockLimiter.isLimitedBlock(block.getType())) return;
+        if (event.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) return;
 
         String itemId = player.getInventory().getItemInMainHand().getType().name();
         if (ConfigManager.isBlockedItem(itemId)) {
             Message.Chat.send(player, ConfigManager.getMessage("blocked-interaction"));
             event.setCancelled(true);
+            return;
         }
+
+        Location blockLocation = block.getLocation();
+        org.bukkit.Bukkit.getScheduler().runTaskLater(BlockLimiterPlugin.getInstance(), () -> {
+            try {
+                if (block.getType() == Material.AIR) {
+                    BlockLimiter.removeBlockIfExists(blockLocation);
+                }
+            } catch (Exception e) {
+                BlockLimiterPlugin.getInstance().getLogger().log(Level.SEVERE, 
+                    "Erro ao processar remoção do bloco para o jogador " + player.getName(), e);
+            }
+        }, 40L);
     }
 
 }
