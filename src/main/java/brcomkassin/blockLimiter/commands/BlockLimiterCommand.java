@@ -1,28 +1,29 @@
 package brcomkassin.blockLimiter.commands;
 
-import brcomkassin.blockLimiter.inventory.LimiterInventory;
-import brcomkassin.blockLimiter.limiter.BlockLimiter;
-import brcomkassin.utils.Message;
-import lombok.SneakyThrows;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabExecutor;
-import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BlockLimiterCommand implements CommandExecutor, TabExecutor {
+import org.bukkit.Material;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabExecutor;
+import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import brcomkassin.blockLimiter.inventory.LimiterInventory;
+import brcomkassin.blockLimiter.limiter.BlockLimiter;
+import brcomkassin.config.ConfigManager;
+import brcomkassin.utils.Message;
+import lombok.SneakyThrows;
+
+public class BlockLimiterCommand implements TabExecutor {
 
     @SneakyThrows
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (!(sender instanceof Player player)) return true;
-
-        ItemStack itemInHand = player.getInventory().getItemInMainHand();
 
         if (args.length == 0) {
             LimiterInventory.openInventory(player);
@@ -30,41 +31,207 @@ public class BlockLimiterCommand implements CommandExecutor, TabExecutor {
         }
 
         if (!player.hasPermission("limiter.perm")) {
-            Message.Chat.send(player, "&4Você não tem permissão para usar esse comando.");
+            Message.Chat.send(player, ConfigManager.getMessage("commands.no-permission"));
             return true;
         }
 
-        switch (args[0]) {
-            case "add":
-                if (args.length < 2) {
-                    Message.Chat.send(player, "&4Você deve passar um valor como parâmetro!");
-                    Message.Chat.send(player, "&4Uso correto: /limites add <valor>");
-                    return true;
-                }
-                try {
-                    int limit = Integer.parseInt(args[1]);
-                    BlockLimiter.addLimitedBlock(player, itemInHand, limit);
-                    if (args.length >= 3) {
-                        BlockLimiter.CONFIGURATOR_BLOCKS.add(itemInHand.getType().name());
-                        Message.Chat.send(player, "&aO bloco foi adicionado ao CONFIGURATOR com o limite definido!");
-                    }
-                } catch (NumberFormatException e) {
-                    Message.Chat.send(player, "&4Você deve passar um valor como parâmetro!");
-                    Message.Chat.send(player, "&4Uso correto: /limites add <valor>");
-                }
-                break;
-            case "remover":
-                BlockLimiter.removeBlockLimit(player);
-                break;
-            default:
-                Message.Chat.send(player, "&4Uso correto: /limites <add>, <remove>");
+        try {
+            switch (args[0].toLowerCase()) {
+                case "criar":
+                    handleCreateGroup(player, args);
+                    break;
+
+                case "adicionar":
+                    handleAddToGroup(player, args);
+                    break;
+
+                case "deletar":
+                    handleDeleteGroup(player, args);
+                    break;
+
+                case "limite":
+                    handleUpdateLimit(player, args);
+                    break;
+
+                case "remover":
+                    handleRemoveFromGroup(player, args);
+                    break;
+
+                default:
+                    showHelp(player);
+                    break;
+            }
+        } catch (SQLException e) {
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.group-not-found", 
+                "group", args[1]));
         }
-        return false;
+        return true;
+    }
+
+    private void handleCreateGroup(Player player, String[] args) {
+        if (args.length < 3) {
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.wrong-usage", 
+                "usage", "/limites criar <nome_grupo> <limite>"));
+            return;
+        }
+        
+        String groupName = args[1];
+        
+        if (groupName.isEmpty()) {
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.empty-group-name"));
+            return;
+        }
+        
+        if (!groupName.matches("^[a-zA-Z0-9_]+$")) {
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.invalid-group-name"));
+            return;
+        }
+
+        int limit;
+        try {
+            limit = Integer.parseInt(args[2]);
+            if (limit <= 0) {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.limit-must-be-positive"));
+                return;
+            }
+        } catch (NumberFormatException e) {
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.invalid-limit"));
+            return;
+        }
+
+        Material material = player.getInventory().getItemInMainHand().getType();
+        if (material == Material.AIR) {
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.hold-item", 
+                "action", "criar um grupo"));
+            return;
+        }
+
+        try {
+            BlockLimiter.addBlockGroup(groupName, limit, material);
+            Message.Chat.send(player, ConfigManager.getMessage("commands.group-created"));
+        } catch (SQLException e) {
+            if (e.getMessage().contains("já está no grupo")) {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.item-already-in-group",
+                    "group", e.getMessage().split("grupo ")[1]));
+            } else if (e.getMessage().contains("já existe")) {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.group-already-exists",
+                    "group", groupName));
+            } else {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.database-error"));
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void handleAddToGroup(Player player, String[] args) throws SQLException {
+        if (args.length < 2) {
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.wrong-usage", 
+                "usage", "/limites adicionar <nome_grupo>"));
+            return;
+        }
+
+        Material material = player.getInventory().getItemInMainHand().getType();
+        if (material == Material.AIR) {
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.hold-item", 
+                "action", "adicionar ao grupo"));
+            return;
+        }
+
+        String groupName = args[1];
+        BlockLimiter.addMaterialToGroup(groupName, material);
+        Message.Chat.send(player, ConfigManager.getMessage("commands.item-added"));
+    }
+
+    private void handleDeleteGroup(Player player, String[] args) throws SQLException {
+        if (args.length < 2) {
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.wrong-usage", 
+                "usage", "/limites deletar <nome_grupo>"));
+            return;
+        }
+
+        String groupName = args[1];
+        BlockLimiter.deleteGroup(groupName);
+        Message.Chat.send(player, ConfigManager.getMessage("commands.group-deleted"));
+    }
+
+    private void handleUpdateLimit(Player player, String[] args) throws SQLException {
+        if (args.length < 3) {
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.wrong-usage", 
+                "usage", "/limites limite <nome_grupo> <novo_limite>"));
+            return;
+        }
+
+        String groupName = args[1];
+        int newLimit;
+        
+        try {
+            newLimit = Integer.parseInt(args[2]);
+            if (newLimit <= 0) {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.limit-must-be-positive"));
+                return;
+            }
+        } catch (NumberFormatException e) {
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.invalid-limit"));
+            return;
+        }
+
+        try {
+            BlockLimiter.updateGroupLimit(groupName, newLimit);
+            Message.Chat.send(player, ConfigManager.getMessage("commands.group-limit-updated"));
+        } catch (SQLException e) {
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.group-not-found", 
+                "group", groupName));
+        }
+    }
+
+    private void handleRemoveFromGroup(Player player, String[] args) {
+        if (args.length < 2) {
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.wrong-usage", 
+                "usage", "/limites remover <nome_grupo>"));
+            return;
+        }
+
+        Material material = player.getInventory().getItemInMainHand().getType();
+        if (material == Material.AIR) {
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.hold-item", 
+                "action", "remover do grupo"));
+            return;
+        }
+
+        String groupName = args[1];
+        try {
+            BlockLimiter.removeMaterialFromGroup(groupName, material);
+            Message.Chat.send(player, ConfigManager.getMessage("commands.item-removed"));
+        } catch (SQLException e) {
+            if (e.getMessage().contains("não encontrado")) {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.group-not-found",
+                    "group", groupName));
+            } else if (e.getMessage().contains("não está no grupo")) {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.item-not-in-group",
+                    "group", groupName));
+            } else if (e.getMessage().contains("último item")) {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.group-is-empty"));
+            } else {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.database-error"));
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void showHelp(Player player) {
+        Message.Chat.send(player,
+            "&6=== Comandos do Sistema de Limites ===",
+            "&e/limites criar <nome_grupo> <limite> &7- Cria um novo grupo",
+            "&e/limites adicionar <nome_grupo> &7- Adiciona o item na mão ao grupo",
+            "&e/limites deletar <nome_grupo> &7- Deleta um grupo",
+            "&e/limites limite <nome_grupo> <novo_limite> &7- Altera o limite de um grupo",
+            "&e/limites remover <nome_grupo> &7- Remove o item na mão do grupo"
+        );
     }
 
     @Override
-    public @Nullable List<String> onTabComplete(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String arg, @NotNull String[] args) {
-        if (!(commandSender instanceof Player player)) {
+    public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+        if (!(sender instanceof Player player)) {
             return null;
         }
 
@@ -72,13 +239,17 @@ public class BlockLimiterCommand implements CommandExecutor, TabExecutor {
             return List.of();
         }
 
-        List<String> strings = new ArrayList<>();
+        List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
-            strings.add("add");
-            strings.add("remover");
-            return strings;
+            completions.add("criar");
+            completions.add("adicionar");
+            completions.add("deletar");
+            completions.add("limite");
+            completions.add("remover");
+            return completions;
         }
+
         return List.of();
     }
 }

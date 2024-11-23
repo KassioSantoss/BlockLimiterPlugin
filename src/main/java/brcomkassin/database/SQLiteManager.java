@@ -1,15 +1,19 @@
 package brcomkassin.database;
 
-import lombok.Getter;
-
 import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import brcomkassin.BlockLimiterPlugin;
+import lombok.Getter;
 
 public class SQLiteManager {
-
+    private static final Logger LOGGER = Logger.getLogger("BlockLimiter");
+    
     @Getter
     private static Connection connection;
 
@@ -17,7 +21,7 @@ public class SQLiteManager {
         try {
             if (connection != null) return;
 
-            File databaseFile = new File("plugins/BlockLimiter/data.db");
+            File databaseFile = new File(BlockLimiterPlugin.getInstance().getDataFolder(), "data.db");
 
             if (!databaseFile.exists()) {
                 databaseFile.getParentFile().mkdirs();
@@ -25,9 +29,9 @@ public class SQLiteManager {
             String url = "jdbc:sqlite:" + databaseFile.getPath();
             connection = DriverManager.getConnection(url);
             createTables();
-            System.out.println("Conectado ao SQLite!");
+            LOGGER.info("Conectado ao SQLite com sucesso!");
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Erro ao conectar ao SQLite", e);
         }
     }
 
@@ -35,28 +39,27 @@ public class SQLiteManager {
         try {
             if (connection != null && !connection.isClosed()) {
                 connection.close();
-                System.out.println("Conexão com SQLite fechada!");
+                LOGGER.info("Conexão com SQLite fechada com sucesso!");
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Erro ao fechar conexão com SQLite", e);
         }
     }
 
     public static void createTables() {
-        String createBlockLimitTable = SQLiteQueries.BLOCK_LIMIT_TABLE.getString();
-
-        String createBlockCountTable = SQLiteQueries.BLOCK_COUNT_TABLE.getString();
-
-        try (PreparedStatement ps1 = connection.prepareStatement(createBlockLimitTable);
-             PreparedStatement ps2 = connection.prepareStatement(createBlockCountTable)) {
+        try (PreparedStatement ps1 = connection.prepareStatement(SQLiteQueries.BLOCK_LIMIT_TABLE.getString());
+             PreparedStatement ps2 = connection.prepareStatement(SQLiteQueries.BLOCK_GROUP_ITEMS_TABLE.getString());
+             PreparedStatement ps3 = connection.prepareStatement(SQLiteQueries.PLACED_BLOCKS_TABLE.getString());
+             PreparedStatement ps4 = connection.prepareStatement(SQLiteQueries.BLOCK_HISTORY_TABLE.getString())) {
 
             ps1.executeUpdate();
             ps2.executeUpdate();
+            ps3.executeUpdate();
+            ps4.executeUpdate();
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Erro ao criar tabelas no SQLite", e);
         }
     }
-
 }
 
