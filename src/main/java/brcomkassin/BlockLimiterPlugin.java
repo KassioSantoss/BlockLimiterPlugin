@@ -13,6 +13,7 @@ import brcomkassin.blockLimiter.listeners.BlockBreakListener;
 import brcomkassin.blockLimiter.listeners.BlockInteractListener;
 import brcomkassin.blockLimiter.listeners.BlockPlaceListener;
 import brcomkassin.blockLimiter.listeners.InventoryClickListener;
+import brcomkassin.blockLimiter.listeners.PistonListener;
 import brcomkassin.database.SQLiteManager;
 import brcomkassin.blockLimiter.limiter.BlockLimiter;
 
@@ -31,7 +32,8 @@ public final class BlockLimiterPlugin extends JavaPlugin {
         registerListeners(new BlockPlaceListener(),
                 new BlockInteractListener(),
                 new BlockBreakListener(),
-                new InventoryClickListener());
+                new InventoryClickListener(),
+                new PistonListener());
     }
 
     @Override
