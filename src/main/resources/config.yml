@@ -1,0 +1,10 @@
+# Lista de itens que não podem interagir com blocos limitados
+blocked-items:
+  - "constructionwand_diamond_wand"
+  - "constructionwand_iron_wand"
+  - "constructionwand_stone_wand"
+  - "constructionwand_infinity_wand"
+
+# Mensagens
+messages:
+  blocked-interaction: "&4Você não pode usar esse item em um bloco limitado" 
