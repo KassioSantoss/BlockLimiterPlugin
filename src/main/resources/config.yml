@@ -7,7 +7,7 @@ blocked-items:
 
 # Mensagens do plugin
 messages:
-  prefix: "&f[&2&lDuende Magnata&f]"
+  prefix: "&f[&2&lBlockLimiter&f]"
   blocked-interaction: "%prefix% &eVocê não pode usar esse item em um bloco limitado"
   limit-reached: "%prefix% &eVocê atingiu o limite máximo definido para este grupo de blocos"
   check-limits: "&eUse &c/limites &epara conferir as restrições"
