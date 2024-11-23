@@ -16,11 +16,14 @@ import brcomkassin.blockLimiter.listeners.InventoryClickListener;
 import brcomkassin.blockLimiter.listeners.PistonListener;
 import brcomkassin.database.SQLiteManager;
 import brcomkassin.blockLimiter.limiter.BlockLimiter;
+import brcomkassin.config.ConfigManager;
 
 public final class BlockLimiterPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        ConfigManager.loadConfig();
+        
         SQLiteManager.connectAndCreateTables();
         try {
             BlockLimiter.loadGroupsFromDatabase();
