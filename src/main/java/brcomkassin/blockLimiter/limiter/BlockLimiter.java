@@ -27,6 +27,10 @@ public class BlockLimiter {
     private static final Map<String, BlockGroup> blockGroups = new HashMap<>();
 
     public static void addBlockGroup(String groupName, int limit, Material... materials) throws SQLException {
+        if (getGroupIdByName(groupName) != null) {
+            throw new SQLException("já existe um grupo com o nome " + groupName);
+        }
+
         for (Material material : materials) {
             BlockGroup existingGroup = findGroupForMaterial(material);
             if (existingGroup != null) {
@@ -220,6 +224,19 @@ public class BlockLimiter {
             throw new SQLException("Grupo não encontrado: " + groupName);
         }
 
+        BlockGroup group = blockGroups.get(groupId);
+        if (group == null) {
+            throw new SQLException("Grupo não encontrado em memória: " + groupName);
+        }
+
+        if (!group.containsMaterial(material)) {
+            throw new SQLException("Este material não está no grupo " + groupName);
+        }
+
+        if (group.getMaterials().size() == 1 && group.getMaterials().contains(material)) {
+            throw new SQLException("Não é possível remover o último item do grupo");
+        }
+
         String deleteBlocksQuery = "DELETE FROM placed_blocks WHERE group_id = ? AND item_id = ?";
         String deleteItemQuery = "DELETE FROM block_group_items WHERE group_id = ? AND item_id = ?";
 
@@ -239,10 +256,7 @@ public class BlockLimiter {
                 ps.executeUpdate();
             }
 
-            BlockGroup group = blockGroups.get(groupId);
-            if (group != null) {
-                group.getMaterials().remove(material);
-            }
+            group.getMaterials().remove(material);
 
             conn.commit();
             

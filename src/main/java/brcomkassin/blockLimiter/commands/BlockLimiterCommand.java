@@ -68,7 +68,7 @@ public class BlockLimiterCommand implements TabExecutor {
         return true;
     }
 
-    private void handleCreateGroup(Player player, String[] args) throws SQLException {
+    private void handleCreateGroup(Player player, String[] args) {
         if (args.length < 3) {
             Message.Chat.send(player, ConfigManager.getMessage("commands.errors.wrong-usage", 
                 "usage", "/limites criar <nome_grupo> <limite>"));
@@ -76,8 +76,18 @@ public class BlockLimiterCommand implements TabExecutor {
         }
         
         String groupName = args[1];
-        int limit;
         
+        if (groupName.isEmpty()) {
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.empty-group-name"));
+            return;
+        }
+        
+        if (!groupName.matches("^[a-zA-Z0-9_]+$")) {
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.invalid-group-name"));
+            return;
+        }
+
+        int limit;
         try {
             limit = Integer.parseInt(args[2]);
             if (limit <= 0) {
@@ -96,8 +106,21 @@ public class BlockLimiterCommand implements TabExecutor {
             return;
         }
 
-        BlockLimiter.addBlockGroup(groupName, limit, material);
-        Message.Chat.send(player, ConfigManager.getMessage("commands.group-created"));
+        try {
+            BlockLimiter.addBlockGroup(groupName, limit, material);
+            Message.Chat.send(player, ConfigManager.getMessage("commands.group-created"));
+        } catch (SQLException e) {
+            if (e.getMessage().contains("já está no grupo")) {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.item-already-in-group",
+                    "group", e.getMessage().split("grupo ")[1]));
+            } else if (e.getMessage().contains("já existe")) {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.group-already-exists",
+                    "group", groupName));
+            } else {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.database-error"));
+                e.printStackTrace();
+            }
+        }
     }
 
     private void handleAddToGroup(Player player, String[] args) throws SQLException {
@@ -161,7 +184,7 @@ public class BlockLimiterCommand implements TabExecutor {
         }
     }
 
-    private void handleRemoveFromGroup(Player player, String[] args) throws SQLException {
+    private void handleRemoveFromGroup(Player player, String[] args) {
         if (args.length < 2) {
             Message.Chat.send(player, ConfigManager.getMessage("commands.errors.wrong-usage", 
                 "usage", "/limites remover <nome_grupo>"));
@@ -176,8 +199,23 @@ public class BlockLimiterCommand implements TabExecutor {
         }
 
         String groupName = args[1];
-        BlockLimiter.removeMaterialFromGroup(groupName, material);
-        Message.Chat.send(player, ConfigManager.getMessage("commands.item-removed"));
+        try {
+            BlockLimiter.removeMaterialFromGroup(groupName, material);
+            Message.Chat.send(player, ConfigManager.getMessage("commands.item-removed"));
+        } catch (SQLException e) {
+            if (e.getMessage().contains("não encontrado")) {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.group-not-found",
+                    "group", groupName));
+            } else if (e.getMessage().contains("não está no grupo")) {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.item-not-in-group",
+                    "group", groupName));
+            } else if (e.getMessage().contains("último item")) {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.group-is-empty"));
+            } else {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.database-error"));
+                e.printStackTrace();
+            }
+        }
     }
 
     private void showHelp(Player player) {
