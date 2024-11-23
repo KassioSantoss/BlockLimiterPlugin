@@ -44,7 +44,6 @@ public class ConfigManager {
             return "§cMensagem não configurada: " + path;
         }
         
-        // Substitui o prefixo se existir
         String prefix = config.getString("messages.prefix", "");
         message = message.replace("%prefix%", prefix);
         
@@ -54,7 +53,6 @@ public class ConfigManager {
     public static String getMessage(String path, String... replacements) {
         String message = getMessage(path);
         
-        // Aplica substituições personalizadas (formato: %key%)
         for (int i = 0; i < replacements.length; i += 2) {
             if (i + 1 < replacements.length) {
                 message = message.replace("%" + replacements[i] + "%", replacements[i + 1]);

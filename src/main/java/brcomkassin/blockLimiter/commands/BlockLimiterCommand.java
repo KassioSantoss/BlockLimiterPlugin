@@ -70,7 +70,7 @@ public class BlockLimiterCommand implements TabExecutor {
             return;
         }
         
-        String groupName = args[1];
+        String groupName = args[1].toLowerCase();
         
         if (groupName.isEmpty()) {
             Message.Chat.send(player, ConfigManager.getMessage("commands.errors.empty-group-name"));
@@ -132,7 +132,7 @@ public class BlockLimiterCommand implements TabExecutor {
             return;
         }
 
-        String groupName = args[1];
+        String groupName = args[1].toLowerCase();
         try {
             BlockLimiter.addMaterialToGroup(groupName, material);
             Message.Chat.send(player, ConfigManager.getMessage("commands.item-added"));
@@ -157,7 +157,7 @@ public class BlockLimiterCommand implements TabExecutor {
             return;
         }
 
-        String groupName = args[1];
+        String groupName = args[1].toLowerCase();
         BlockLimiter.deleteGroup(groupName);
         Message.Chat.send(player, ConfigManager.getMessage("commands.group-deleted"));
     }
@@ -169,7 +169,7 @@ public class BlockLimiterCommand implements TabExecutor {
             return;
         }
 
-        String groupName = args[1];
+        String groupName = args[1].toLowerCase();
         int newLimit;
         
         try {
@@ -206,7 +206,7 @@ public class BlockLimiterCommand implements TabExecutor {
             return;
         }
 
-        String groupName = args[1];
+        String groupName = args[1].toLowerCase();
         try {
             BlockLimiter.removeMaterialFromGroup(groupName, material);
             Message.Chat.send(player, ConfigManager.getMessage("commands.item-removed"));

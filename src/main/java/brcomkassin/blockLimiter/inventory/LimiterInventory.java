@@ -51,7 +51,6 @@ public class LimiterInventory {
             clearInventory();
             setupBorder();
             loadGroups();
-            AnimatedInventory.startAnimation();
             isInitialized = true;
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Erro ao inicializar inventário", e);
@@ -90,21 +89,36 @@ public class LimiterInventory {
             
             int actualSlot = CONTENT_SLOTS[slot++];
             LOGGER.log(Level.INFO, "Registrando grupo {0} no slot {1}", new Object[]{group.getGroupName(), actualSlot});
-            AnimatedInventory.registerSlot(actualSlot, group);
-            updateSlot(actualSlot);
+            AnimatedInventory.SLOT_GROUP_MAP.put(actualSlot, group);
+            updateSlot(actualSlot, null);
         }
     }
 
-    public static void updateSlot(int slot) {
-        Material currentMaterial = AnimatedInventory.getCurrentMaterial(slot);
+    public static void updateSlot(int slot, Player player) {
+        Material currentMaterial;
+        if (player != null) {
+            currentMaterial = AnimatedInventory.getCurrentMaterial(slot, player.getUniqueId());
+        } else {
+            BlockGroup group = null;
+            for (BlockGroup g : BlockLimiter.getAllGroups()) {
+                if (!g.getMaterials().isEmpty()) {
+                    group = g;
+                    break;
+                }
+            }
+            if (group == null) return;
+            currentMaterial = group.getMaterials().iterator().next();
+        }
+
         if (currentMaterial == null) {
-            LOGGER.log(Level.WARNING, "Material atual \u00e9 nulo para o slot {0}", slot);
+            LOGGER.log(Level.WARNING, "Material atual é nulo para o slot {0}", slot);
             return;
         }
 
         BlockGroup group = BlockLimiter.findGroupForMaterial(currentMaterial);
         if (group == null) {
-            LOGGER.log(Level.WARNING, "Grupo n\u00e3o encontrado para o material {0} no slot {1}", new Object[]{currentMaterial, slot});
+            LOGGER.log(Level.WARNING, "Grupo não encontrado para o material {0} no slot {1}", 
+                new Object[]{currentMaterial, slot});
             return;
         }
 
@@ -112,7 +126,8 @@ public class LimiterInventory {
         List<String> lore = new ArrayList<>();
         
         try {
-            int totalPlaced = getPlayerBlockCount(null, group.getGroupId());
+            UUID playerUuid = player != null ? player.getUniqueId() : null;
+            int totalPlaced = getPlayerBlockCount(playerUuid, group.getGroupId());
             lore.add("&7Blocos no chão: &a" + totalPlaced + " &7/ &c" + group.getLimit());
             lore.add("");
             lore.add("&7Blocos neste grupo:");
@@ -131,7 +146,11 @@ public class LimiterInventory {
                 .setLore(lore)
                 .build();
 
-        INVENTORY.setItem(slot, item);
+        if (player != null) {
+            player.getOpenInventory().setItem(slot, item);
+        } else {
+            INVENTORY.setItem(slot, item);
+        }
     }
 
     private static String capitalizeGroupName(String name) {
@@ -151,36 +170,62 @@ public class LimiterInventory {
             initializeInventory();
         }
 
-        Inventory personalizedInventory = Bukkit.createInventory(null, 54, Component.text(InventoryType.LIMITER.getName()));
-        personalizedInventory.clear();
+        Inventory personalizedInventory = Bukkit.createInventory(null, INVENTORY.getSize(), 
+            Component.text(InventoryType.LIMITER.getName()));
+        
+        setupBorder(personalizedInventory);
+        loadGroupsForPlayer(player, personalizedInventory);
+        
+        player.openInventory(personalizedInventory);
+        AnimatedInventory.startAnimation(player);
+    }
 
-        for (int i = 0; i < INVENTORY.getSize(); i++) {
-            ItemStack baseItem = INVENTORY.getItem(i);
-            if (baseItem == null) continue;
+    private static void loadGroupsForPlayer(Player player, Inventory inventory) throws SQLException {
+        List<BlockGroup> groups = BlockLimiter.getAllGroups();
+        
+        int startIndex = currentPage * ITEMS_PER_PAGE;
+        int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, groups.size());
+        
+        AnimatedInventory.clearSlots(); 
+        
+        int slot = 0;
+        for (int i = startIndex; i < endIndex; i++) {
+            BlockGroup group = groups.get(i);
+            if (slot >= CONTENT_SLOTS.length) break;
+            
+            int actualSlot = CONTENT_SLOTS[slot++];
+            AnimatedInventory.registerSlot(actualSlot, group, player);
+            
+            Material initialMaterial = group.getMaterials().iterator().next();
+            List<String> lore = new ArrayList<>();
+            lore.add("&7Seus blocos: &a" + BlockLimiter.getPlacedBlockCount(player.getUniqueId(), group.getGroupId()) + " &7/ &c" + group.getLimit());
+            lore.add("");
+            lore.add("&7Blocos neste grupo:");
+            group.getMaterials().forEach(material -> {
+                String prefix = material.equals(initialMaterial) ? "&a" : "&7";
+                lore.add("&8- " + prefix + formatMaterialName(material.name()));
+            });
 
-            if (AnimatedInventory.getCurrentMaterial(i) != null) {
-                BlockGroup group = BlockLimiter.findGroupForMaterial(baseItem.getType());
-                if (group == null) continue;
-
-                int playerCount = getPlayerBlockCount(player.getUniqueId(), group.getGroupId());
-                List<String> lore = new ArrayList<>();
-                lore.add("&7Seus blocos: &a" + playerCount + " &7/ &c" + group.getLimit());
-                lore.add("");
-                lore.add("&7Blocos neste grupo:");
-                group.getMaterials().stream()
-                        .map(material -> "&8- &7" + formatMaterialName(material.name()))
-                        .forEach(lore::add);
-
-                ItemStack personalizedItem = new ItemBuilder(baseItem)
-                        .setLore(lore)
-                        .build();
-                personalizedInventory.setItem(i, personalizedItem);
-            } else {
-                personalizedInventory.setItem(i, baseItem);
-            }
+            ItemStack item = new ItemBuilder(initialMaterial)
+                    .setName("&6" + formatGroupName(group.getGroupName()))
+                    .setLore(lore)
+                    .build();
+            
+            inventory.setItem(actualSlot, item);
         }
 
-        player.openInventory(personalizedInventory);
+        AnimatedInventory.startAnimation(player);
+        // AnimatedInventory.debugState(player);
+    }
+
+    private static void setupBorder(Inventory inventory) {
+        ItemStack borderItem = new ItemBuilder(Material.GRAY_STAINED_GLASS_PANE)
+                .setName(" ")
+                .build();
+
+        for (int slot : BORDER_SLOTS) {
+            inventory.setItem(slot, borderItem);
+        }
     }
 
     private static int getPlayerBlockCount(UUID playerUuid, String groupId) throws SQLException {
@@ -253,14 +298,10 @@ public class LimiterInventory {
         }
     }
 
-    public static void cleanup() {
-        AnimatedInventory.stopAnimation();
-    }
-
     public static void refreshInventory() {
         try {
             clearInventory();
-            setupBorder();
+            setupBorder(INVENTORY);
             loadGroups();
             setupNavigationButtons();
         } catch (SQLException e) {
@@ -307,5 +348,11 @@ public class LimiterInventory {
                 refreshInventory();
             }
         }
+    }
+
+    private static String formatGroupName(String name) {
+        return Arrays.stream(name.split("_"))
+                .map(word -> word.substring(0, 1).toUpperCase() + word.substring(1).toLowerCase())
+                .collect(Collectors.joining(" "));
     }
 }
