@@ -317,12 +317,24 @@ public class LimiterInventory {
         INVENTORY.setItem(PREVIOUS_PAGE_SLOT, null);
         INVENTORY.setItem(NEXT_PAGE_SLOT, null);
 
+        ItemStack borderItem = new ItemBuilder(Material.GRAY_STAINED_GLASS_PANE)
+                .setName(" ")
+                .build();
+
+        if (totalPages <= 1) {
+            INVENTORY.setItem(PREVIOUS_PAGE_SLOT, borderItem);
+            INVENTORY.setItem(NEXT_PAGE_SLOT, borderItem);
+            return;
+        }
+
         if (currentPage > 0) {
             ItemStack previousPage = new ItemBuilder(Material.ARROW)
                     .setName("&aPágina Anterior")
                     .setLore("&7Clique para voltar para a página " + currentPage)
                     .build();
             INVENTORY.setItem(PREVIOUS_PAGE_SLOT, previousPage);
+        } else {
+            INVENTORY.setItem(PREVIOUS_PAGE_SLOT, borderItem);
         }
 
         if (currentPage < totalPages - 1) {
@@ -331,10 +343,9 @@ public class LimiterInventory {
                     .setLore("&7Clique para ir para a página " + (currentPage + 2))
                     .build();
             INVENTORY.setItem(NEXT_PAGE_SLOT, nextPage);
+        } else {
+            INVENTORY.setItem(NEXT_PAGE_SLOT, borderItem);
         }
-
-        LOGGER.log(Level.INFO, "Configurando botões de navegação: Página atual={0}, Total de páginas={1}", 
-            new Object[]{currentPage + 1, totalPages});
     }
 
     public static void handleInventoryClick(InventoryClickEvent event) {
