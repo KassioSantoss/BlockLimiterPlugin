@@ -10,6 +10,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 
 import brcomkassin.blockLimiter.limiter.BlockGroup;
 import brcomkassin.blockLimiter.limiter.BlockLimiter;
+import brcomkassin.config.ConfigManager;
 import brcomkassin.utils.Message;
 
 public class BlockPlaceListener implements Listener {
@@ -25,7 +26,11 @@ public class BlockPlaceListener implements Listener {
         if (group == null) return;
 
         if (!BlockLimiter.canPlaceBlock(player, material, event.getBlock().getLocation())) {
-            Message.Chat.send(player, "&f[&2&lDuende Magnata&f]: &eVocê atingiu o limite máximo definido para este bloco, digite &c/limites &epara conferir as restrições.");
+            Message.Chat.send(player, 
+                ConfigManager.getMessage("limit-reached"),
+                ConfigManager.getMessage("check-limits"),
+                ConfigManager.getMessage("invalid-blocks-note")
+            );
             event.setCancelled(true);
             return;
         }

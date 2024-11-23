@@ -14,6 +14,7 @@ import org.jetbrains.annotations.Nullable;
 
 import brcomkassin.blockLimiter.inventory.LimiterInventory;
 import brcomkassin.blockLimiter.limiter.BlockLimiter;
+import brcomkassin.config.ConfigManager;
 import brcomkassin.utils.Message;
 import lombok.SneakyThrows;
 
@@ -30,7 +31,7 @@ public class BlockLimiterCommand implements TabExecutor {
         }
 
         if (!player.hasPermission("limiter.perm")) {
-            Message.Chat.send(player, "&4Você não tem permissão para usar esse comando.");
+            Message.Chat.send(player, ConfigManager.getMessage("commands.no-permission"));
             return true;
         }
 
@@ -61,61 +62,79 @@ public class BlockLimiterCommand implements TabExecutor {
                     break;
             }
         } catch (SQLException e) {
-            Message.Chat.send(player, "&4Erro: " + e.getMessage());
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.group-not-found", 
+                "group", args[1]));
         }
         return true;
     }
 
     private void handleCreateGroup(Player player, String[] args) throws SQLException {
         if (args.length < 3) {
-            Message.Chat.send(player, "&4Uso correto: /limites criar <nome_grupo> <limite>");
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.wrong-usage", 
+                "usage", "/limites criar <nome_grupo> <limite>"));
             return;
         }
         
         String groupName = args[1];
-        int limit = Integer.parseInt(args[2]);
-        Material material = player.getInventory().getItemInMainHand().getType();
+        int limit;
         
+        try {
+            limit = Integer.parseInt(args[2]);
+            if (limit <= 0) {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.limit-must-be-positive"));
+                return;
+            }
+        } catch (NumberFormatException e) {
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.invalid-limit"));
+            return;
+        }
+
+        Material material = player.getInventory().getItemInMainHand().getType();
         if (material == Material.AIR) {
-            Message.Chat.send(player, "&4Você precisa segurar um item para criar um grupo!");
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.hold-item", 
+                "action", "criar um grupo"));
             return;
         }
 
         BlockLimiter.addBlockGroup(groupName, limit, material);
-        Message.Chat.send(player, "&aGrupo criado com sucesso!");
+        Message.Chat.send(player, ConfigManager.getMessage("commands.group-created"));
     }
 
     private void handleAddToGroup(Player player, String[] args) throws SQLException {
         if (args.length < 2) {
-            Message.Chat.send(player, "&4Uso correto: /limites adicionar <nome_grupo>");
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.wrong-usage", 
+                "usage", "/limites adicionar <nome_grupo>"));
             return;
         }
 
         Material material = player.getInventory().getItemInMainHand().getType();
         if (material == Material.AIR) {
-            Message.Chat.send(player, "&4Você precisa segurar um item para adicionar ao grupo!");
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.hold-item", 
+                "action", "adicionar ao grupo"));
             return;
         }
 
         String groupName = args[1];
         BlockLimiter.addMaterialToGroup(groupName, material);
-        Message.Chat.send(player, "&aItem adicionado ao grupo com sucesso!");
+        Message.Chat.send(player, ConfigManager.getMessage("commands.item-added"));
     }
 
     private void handleDeleteGroup(Player player, String[] args) throws SQLException {
         if (args.length < 2) {
-            Message.Chat.send(player, "&4Uso correto: /limites deletar <nome_grupo>");
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.wrong-usage", 
+                "usage", "/limites deletar <nome_grupo>"));
             return;
         }
 
         String groupName = args[1];
         BlockLimiter.deleteGroup(groupName);
-        Message.Chat.send(player, "&aGrupo deletado com sucesso!");
+        Message.Chat.send(player, ConfigManager.getMessage("commands.group-deleted"));
     }
 
     private void handleUpdateLimit(Player player, String[] args) throws SQLException {
         if (args.length < 3) {
-            Message.Chat.send(player, "&4Uso correto: /limites limite <nome_grupo> <novo_limite>");
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.wrong-usage", 
+                "usage", "/limites limite <nome_grupo> <novo_limite>"));
             return;
         }
 
@@ -125,37 +144,40 @@ public class BlockLimiterCommand implements TabExecutor {
         try {
             newLimit = Integer.parseInt(args[2]);
             if (newLimit <= 0) {
-                Message.Chat.send(player, "&4O limite deve ser um número maior que zero!");
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.limit-must-be-positive"));
                 return;
             }
         } catch (NumberFormatException e) {
-            Message.Chat.send(player, "&4O limite deve ser um número válido!");
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.invalid-limit"));
             return;
         }
 
         try {
             BlockLimiter.updateGroupLimit(groupName, newLimit);
-            Message.Chat.send(player, "&aLimite do grupo atualizado com sucesso!");
+            Message.Chat.send(player, ConfigManager.getMessage("commands.group-limit-updated"));
         } catch (SQLException e) {
-            Message.Chat.send(player, "&4Erro: " + e.getMessage());
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.group-not-found", 
+                "group", groupName));
         }
     }
 
     private void handleRemoveFromGroup(Player player, String[] args) throws SQLException {
         if (args.length < 2) {
-            Message.Chat.send(player, "&4Uso correto: /limites remover <nome_grupo>");
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.wrong-usage", 
+                "usage", "/limites remover <nome_grupo>"));
             return;
         }
 
         Material material = player.getInventory().getItemInMainHand().getType();
         if (material == Material.AIR) {
-            Message.Chat.send(player, "&4Você precisa segurar um item para remover do grupo!");
+            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.hold-item", 
+                "action", "remover do grupo"));
             return;
         }
 
         String groupName = args[1];
         BlockLimiter.removeMaterialFromGroup(groupName, material);
-        Message.Chat.send(player, "&aItem removido do grupo com sucesso!");
+        Message.Chat.send(player, ConfigManager.getMessage("commands.item-removed"));
     }
 
     private void showHelp(Player player) {

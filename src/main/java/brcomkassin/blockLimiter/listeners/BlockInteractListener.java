@@ -26,7 +26,7 @@ public class BlockInteractListener implements Listener {
 
         String itemId = player.getInventory().getItemInMainHand().getType().name();
         if (ConfigManager.isBlockedItem(itemId)) {
-            Message.Chat.send(player, "&eVocê não pode usar esse item em um bloco limitado");
+            Message.Chat.send(player, ConfigManager.getMessage("blocked-interaction"));
             event.setCancelled(true);
         }
     }
