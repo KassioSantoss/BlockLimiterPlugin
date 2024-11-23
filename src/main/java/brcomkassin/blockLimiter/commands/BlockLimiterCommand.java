@@ -35,35 +35,30 @@ public class BlockLimiterCommand implements TabExecutor {
             return true;
         }
 
-        try {
-            switch (args[0].toLowerCase()) {
-                case "criar":
-                    handleCreateGroup(player, args);
-                    break;
+        switch (args[0].toLowerCase()) {
+            case "criar":
+                handleCreateGroup(player, args);
+                break;
 
-                case "adicionar":
-                    handleAddToGroup(player, args);
-                    break;
+            case "adicionar":
+                handleAddToGroup(player, args);
+                break;
 
-                case "deletar":
-                    handleDeleteGroup(player, args);
-                    break;
+            case "deletar":
+                handleDeleteGroup(player, args);
+                break;
 
-                case "limite":
-                    handleUpdateLimit(player, args);
-                    break;
+            case "limite":
+                handleUpdateLimit(player, args);
+                break;
 
-                case "remover":
-                    handleRemoveFromGroup(player, args);
-                    break;
+            case "remover":
+                handleRemoveFromGroup(player, args);
+                break;
 
-                default:
-                    showHelp(player);
-                    break;
-            }
-        } catch (SQLException e) {
-            Message.Chat.send(player, ConfigManager.getMessage("commands.errors.group-not-found", 
-                "group", args[1]));
+            default:
+                showHelp(player);
+                break;
         }
         return true;
     }
@@ -138,8 +133,21 @@ public class BlockLimiterCommand implements TabExecutor {
         }
 
         String groupName = args[1];
-        BlockLimiter.addMaterialToGroup(groupName, material);
-        Message.Chat.send(player, ConfigManager.getMessage("commands.item-added"));
+        try {
+            BlockLimiter.addMaterialToGroup(groupName, material);
+            Message.Chat.send(player, ConfigManager.getMessage("commands.item-added"));
+        } catch (SQLException e) {
+            if (e.getMessage().contains("já está no grupo")) {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.item-already-in-group",
+                    "group", e.getMessage().split("grupo ")[1]));
+            } else if (e.getMessage().contains("Grupo não encontrado")) {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.group-not-found",
+                    "group", groupName));
+            } else {
+                Message.Chat.send(player, ConfigManager.getMessage("commands.errors.database-error"));
+                e.printStackTrace();
+            }
+        }
     }
 
     private void handleDeleteGroup(Player player, String[] args) throws SQLException {
