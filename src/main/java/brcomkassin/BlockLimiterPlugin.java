@@ -1,5 +1,12 @@
 package brcomkassin;
 
+import java.sql.SQLException;
+import java.util.logging.Level;
+
+import org.bukkit.command.PluginCommand;
+import org.bukkit.event.Listener;
+import org.bukkit.plugin.java.JavaPlugin;
+
 import brcomkassin.blockLimiter.commands.BlockLimiterCommand;
 import brcomkassin.blockLimiter.inventory.LimiterInventory;
 import brcomkassin.blockLimiter.listeners.BlockBreakListener;
@@ -7,17 +14,20 @@ import brcomkassin.blockLimiter.listeners.BlockInteractListener;
 import brcomkassin.blockLimiter.listeners.BlockPlaceListener;
 import brcomkassin.blockLimiter.listeners.InventoryClickListener;
 import brcomkassin.database.SQLiteManager;
-import org.bukkit.event.Listener;
-import org.bukkit.plugin.java.JavaPlugin;
+import brcomkassin.blockLimiter.limiter.BlockLimiter;
 
 public final class BlockLimiterPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
         SQLiteManager.connectAndCreateTables();
+        try {
+            BlockLimiter.loadGroupsFromDatabase();
+        } catch (SQLException e) {
+            getLogger().log(Level.SEVERE, "Erro ao carregar grupos do banco de dados: {0}", e.getMessage());
+        }
+        registerCommand();
         LimiterInventory.initializeInventory();
-
-        getCommand("limites").setExecutor(new BlockLimiterCommand());
         registerListeners(new BlockPlaceListener(),
                 new BlockInteractListener(),
                 new BlockBreakListener(),
@@ -27,6 +37,7 @@ public final class BlockLimiterPlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         SQLiteManager.disconnect();
+        LimiterInventory.cleanup();
     }
 
     private void registerListeners(Listener... listeners) {
@@ -39,4 +50,15 @@ public final class BlockLimiterPlugin extends JavaPlugin {
         return BlockLimiterPlugin.getPlugin(BlockLimiterPlugin.class);
     }
 
+    private void registerCommand() {
+        PluginCommand command = getCommand("limites");
+        if (command == null) {
+            getLogger().warning("Comando 'limites' não encontrado no plugin.yml!");
+            return;
+        }
+        
+        BlockLimiterCommand executor = new BlockLimiterCommand();
+        command.setExecutor(executor);
+        command.setTabCompleter(executor);
+    }
 }

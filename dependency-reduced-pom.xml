@@ -38,7 +38,7 @@
         <artifactId>maven-jar-plugin</artifactId>
         <version>2.3.1</version>
         <configuration>
-          <outputDirectory>K:\Todos da area de trabalho\servidor com mods 1.20.1\plugins</outputDirectory>
+          <outputDirectory>build</outputDirectory>
         </configuration>
       </plugin>
     </plugins>
