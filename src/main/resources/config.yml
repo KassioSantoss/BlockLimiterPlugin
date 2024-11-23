@@ -4,3 +4,33 @@ blocked-items:
   - "constructionwand_iron_wand"
   - "constructionwand_stone_wand"
   - "constructionwand_infinity_wand"
+
+# Mensagens do plugin
+messages:
+  prefix: "&f[&2&lBlockLimiter&f]"
+  blocked-interaction: "%prefix% &eVocê não pode usar esse item em um bloco limitado"
+  limit-reached: "%prefix% &eVocê atingiu o limite máximo definido para este grupo de blocos"
+  check-limits: "&eUse &c/limites &epara conferir as restrições"
+  invalid-blocks-note: "&eNota: Se algum bloco foi removido ou substituído, tente colocar novamente"
+  
+  commands:
+    no-permission: "%prefix% &4Você não tem permissão para usar esse comando"
+    group-created: "%prefix% &aGrupo criado com sucesso!"
+    group-deleted: "%prefix% &aGrupo deletado com sucesso!"
+    group-limit-updated: "%prefix% &aLimite do grupo atualizado com sucesso!"
+    item-added: "%prefix% &aItem adicionado ao grupo com sucesso!"
+    item-removed: "%prefix% &aItem removido do grupo com sucesso!"
+    
+    errors:
+      invalid-limit: "&4O limite deve ser um número válido!"
+      limit-must-be-positive: "&4O limite deve ser um número maior que zero!"
+      group-not-found: "&4Grupo não encontrado: %group%"
+      item-already-in-group: "&4Este material já está no grupo %group%"
+      group-already-exists: "&4Já existe um grupo com o nome %group%"
+      hold-item: "&4Você precisa segurar um item para %action%"
+      wrong-usage: "&4Uso correto: %usage%"
+      item-not-in-group: "&4Este item não está no grupo %group%"
+      empty-group-name: "&4O nome do grupo não pode estar vazio"
+      invalid-group-name: "&4O nome do grupo só pode conter letras, números e underscores"
+      group-is-empty: "&4Não é possível remover o último item do grupo"
+      database-error: "&4Ocorreu um erro ao acessar o banco de dados. Tente novamente."

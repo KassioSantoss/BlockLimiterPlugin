@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import brcomkassin.BlockLimiterPlugin;
 import lombok.Getter;
 
 public class SQLiteManager {
@@ -20,7 +21,7 @@ public class SQLiteManager {
         try {
             if (connection != null) return;
 
-            File databaseFile = new File("plugins/BlockLimiter/data.db");
+            File databaseFile = new File(BlockLimiterPlugin.getInstance().getDataFolder(), "data.db");
 
             if (!databaseFile.exists()) {
                 databaseFile.getParentFile().mkdirs();
