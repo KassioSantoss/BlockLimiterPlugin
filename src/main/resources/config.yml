@@ -4,7 +4,3 @@ blocked-items:
   - "constructionwand_iron_wand"
   - "constructionwand_stone_wand"
   - "constructionwand_infinity_wand"
-
-# Mensagens
-messages:
-  blocked-interaction: "&4Você não pode usar esse item em um bloco limitado" 

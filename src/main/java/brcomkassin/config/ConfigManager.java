@@ -32,10 +32,6 @@ public class ConfigManager {
         return blockedItems.contains(itemId.toLowerCase());
     }
 
-    public static String getMessage(String path) {
-        return config.getString("messages." + path, "Mensagem não encontrada: " + path);
-    }
-
     public static void reloadConfig() {
         BlockLimiterPlugin plugin = BlockLimiterPlugin.getInstance();
         plugin.reloadConfig();
