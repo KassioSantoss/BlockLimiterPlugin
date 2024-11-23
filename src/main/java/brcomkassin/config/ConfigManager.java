@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -18,12 +19,16 @@ public class ConfigManager {
 
     public static void loadConfig() {
         BlockLimiterPlugin plugin = BlockLimiterPlugin.getInstance();
+        if (!plugin.getDataFolder().exists()) {
+            plugin.getDataFolder().mkdirs();
+        }
+        
         plugin.saveDefaultConfig();
         config = plugin.getConfig();
         
         blockedItems.clear();
         List<String> items = config.getStringList("blocked-items");
-        blockedItems.addAll(items);
+        blockedItems.addAll(items.stream().map(String::toLowerCase).collect(Collectors.toList()));
         
         LOGGER.log(Level.INFO, "Carregados {0} itens bloqueados da configuração", blockedItems.size());
     }
