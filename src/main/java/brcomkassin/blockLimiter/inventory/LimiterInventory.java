@@ -14,9 +14,9 @@ import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.event.inventory.InventoryClickEvent;
 
 import brcomkassin.blockLimiter.limiter.BlockGroup;
 import brcomkassin.blockLimiter.limiter.BlockLimiter;
@@ -51,6 +51,7 @@ public class LimiterInventory {
             clearInventory();
             setupBorder();
             loadGroups();
+            setupNavigationButtons();
             isInitialized = true;
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Erro ao inicializar inventário", e);
@@ -311,7 +312,10 @@ public class LimiterInventory {
 
     private static void setupNavigationButtons() {
         List<BlockGroup> groups = BlockLimiter.getAllGroups();
-        int totalPages = (int) Math.ceil(groups.size() / (double) ITEMS_PER_PAGE);
+        int totalPages = (int) Math.ceil((double) groups.size() / ITEMS_PER_PAGE);
+
+        INVENTORY.setItem(PREVIOUS_PAGE_SLOT, null);
+        INVENTORY.setItem(NEXT_PAGE_SLOT, null);
 
         if (currentPage > 0) {
             ItemStack previousPage = new ItemBuilder(Material.ARROW)
@@ -328,6 +332,9 @@ public class LimiterInventory {
                     .build();
             INVENTORY.setItem(NEXT_PAGE_SLOT, nextPage);
         }
+
+        LOGGER.log(Level.INFO, "Configurando botões de navegação: Página atual={0}, Total de páginas={1}", 
+            new Object[]{currentPage + 1, totalPages});
     }
 
     public static void handleInventoryClick(InventoryClickEvent event) {
