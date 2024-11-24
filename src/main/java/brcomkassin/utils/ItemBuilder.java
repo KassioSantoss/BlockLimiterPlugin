@@ -73,14 +73,17 @@ public final class ItemBuilder {
         return this;
     }
 
+    @SuppressWarnings("deprecation")
     private String translateColorCodes(String text) {
         return ChatColor.translateAlternateColorCodes('&', text);
     }
 
+    @SuppressWarnings("deprecation")
     public ItemBuilder setName(String displayName) {
         return consumeMeta(meta -> meta.setDisplayName(translateColorCodes(displayName)));
     }
 
+    @SuppressWarnings("deprecation")
     public ItemBuilder setLore(List<String> lines) {
         return consumeMeta(meta -> meta.setLore(lines.stream().map(this::translateColorCodes).collect(Collectors.toList())));
     }

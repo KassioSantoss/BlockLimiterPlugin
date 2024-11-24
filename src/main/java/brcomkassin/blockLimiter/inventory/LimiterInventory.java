@@ -14,9 +14,9 @@ import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.event.inventory.InventoryClickEvent;
 
 import brcomkassin.blockLimiter.limiter.BlockGroup;
 import brcomkassin.blockLimiter.limiter.BlockLimiter;
@@ -45,12 +45,14 @@ public class LimiterInventory {
     private static final int ITEMS_PER_PAGE = 28; 
 
     private static int currentPage = 0;
+    private static Inventory currentInventory = null;
 
     public static void initializeInventory() {
         try {
             clearInventory();
             setupBorder();
             loadGroups();
+            setupNavigationButtons();
             isInitialized = true;
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Erro ao inicializar inventário", e);
@@ -74,7 +76,6 @@ public class LimiterInventory {
 
     private static void loadGroups() throws SQLException {
         List<BlockGroup> groups = BlockLimiter.getAllGroups();
-        LOGGER.log(Level.INFO, "Carregando {0} grupos para o inventário", groups.size());
         
         int startIndex = currentPage * ITEMS_PER_PAGE;
         int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, groups.size());
@@ -83,12 +84,10 @@ public class LimiterInventory {
         for (int i = startIndex; i < endIndex; i++) {
             BlockGroup group = groups.get(i);
             if (slot >= CONTENT_SLOTS.length) {
-                LOGGER.warning("Limite de slots atingido, alguns grupos não serão exibidos");
                 break;
             }
             
             int actualSlot = CONTENT_SLOTS[slot++];
-            LOGGER.log(Level.INFO, "Registrando grupo {0} no slot {1}", new Object[]{group.getGroupName(), actualSlot});
             AnimatedInventory.SLOT_GROUP_MAP.put(actualSlot, group);
             updateSlot(actualSlot, null);
         }
@@ -111,7 +110,6 @@ public class LimiterInventory {
         }
 
         if (currentMaterial == null) {
-            LOGGER.log(Level.WARNING, "Material atual é nulo para o slot {0}", slot);
             return;
         }
 
@@ -173,8 +171,11 @@ public class LimiterInventory {
         Inventory personalizedInventory = Bukkit.createInventory(null, INVENTORY.getSize(), 
             Component.text(InventoryType.LIMITER.getName()));
         
+        currentInventory = personalizedInventory;
+        
         setupBorder(personalizedInventory);
         loadGroupsForPlayer(player, personalizedInventory);
+        setupNavigationButtons(personalizedInventory);
         
         player.openInventory(personalizedInventory);
         AnimatedInventory.startAnimation(player);
@@ -300,25 +301,46 @@ public class LimiterInventory {
 
     public static void refreshInventory() {
         try {
-            clearInventory();
-            setupBorder(INVENTORY);
-            loadGroups();
-            setupNavigationButtons();
+            if (currentInventory != null) {
+                for (int slot : CONTENT_SLOTS) {
+                    currentInventory.setItem(slot, null);
+                }
+                
+                // Reconfigurar o inventário
+                setupBorder(currentInventory);
+                
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    if (player.getOpenInventory().getTopInventory().equals(currentInventory)) {
+                        loadGroupsForPlayer(player, currentInventory);
+                        setupNavigationButtons(currentInventory);
+                        break;
+                    }
+                }
+            }
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Erro ao atualizar inventário", e);
         }
     }
 
-    private static void setupNavigationButtons() {
+    private static void setupNavigationButtons(Inventory inventory) {
         List<BlockGroup> groups = BlockLimiter.getAllGroups();
-        int totalPages = (int) Math.ceil(groups.size() / (double) ITEMS_PER_PAGE);
+        int totalPages = (int) Math.ceil((double) groups.size() / ITEMS_PER_PAGE);
+
+        inventory.setItem(PREVIOUS_PAGE_SLOT, null);
+        inventory.setItem(NEXT_PAGE_SLOT, null);
+
+        ItemStack borderItem = new ItemBuilder(Material.GRAY_STAINED_GLASS_PANE)
+                .setName(" ")
+                .build();
 
         if (currentPage > 0) {
             ItemStack previousPage = new ItemBuilder(Material.ARROW)
                     .setName("&aPágina Anterior")
                     .setLore("&7Clique para voltar para a página " + currentPage)
                     .build();
-            INVENTORY.setItem(PREVIOUS_PAGE_SLOT, previousPage);
+            inventory.setItem(PREVIOUS_PAGE_SLOT, previousPage);
+        } else {
+            inventory.setItem(PREVIOUS_PAGE_SLOT, borderItem);
         }
 
         if (currentPage < totalPages - 1) {
@@ -326,8 +348,14 @@ public class LimiterInventory {
                     .setName("&aPróxima Página")
                     .setLore("&7Clique para ir para a página " + (currentPage + 2))
                     .build();
-            INVENTORY.setItem(NEXT_PAGE_SLOT, nextPage);
+            inventory.setItem(NEXT_PAGE_SLOT, nextPage);
+        } else {
+            inventory.setItem(NEXT_PAGE_SLOT, borderItem);
         }
+    }
+
+    private static void setupNavigationButtons() {
+        setupNavigationButtons(INVENTORY);
     }
 
     public static void handleInventoryClick(InventoryClickEvent event) {
