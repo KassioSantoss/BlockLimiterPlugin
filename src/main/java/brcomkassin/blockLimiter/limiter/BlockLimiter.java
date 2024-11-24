@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -390,7 +391,9 @@ public class BlockLimiter {
     }
 
     public static List<BlockGroup> getAllGroups() {
-        return new ArrayList<>(blockGroups.values());
+        return blockGroups.values().stream()
+            .sorted((g1, g2) -> g1.getGroupName().compareToIgnoreCase(g2.getGroupName()))
+            .collect(Collectors.toList());
     }
 
     public static void loadGroupsFromDatabase() throws SQLException {
