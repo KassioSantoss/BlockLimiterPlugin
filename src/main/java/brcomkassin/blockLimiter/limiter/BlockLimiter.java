@@ -111,6 +111,8 @@ public class BlockLimiter {
         BlockGroup group = findGroupForMaterial(material);
         if (group == null) return;
 
+        removeBlockFromDatabase(location);
+
         String query = "INSERT INTO placed_blocks (player_uuid, group_id, item_id, world, x, y, z) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
             ps.setString(1, player.getUniqueId().toString());
@@ -431,9 +433,7 @@ public class BlockLimiter {
     }
 
     public static void removeBlockIfExists(Location location) {
-        if (isBlockRegistered(location)) {
-            removeBlockFromDatabase(location);
-        }
+        removeBlockFromDatabase(location);
     }
 
     public static boolean isBlockRegistered(Location location) {
