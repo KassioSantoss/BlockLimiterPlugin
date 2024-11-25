@@ -3,21 +3,25 @@ package brcomkassin;
 import java.sql.SQLException;
 import java.util.logging.Level;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import brcomkassin.blockLimiter.commands.BlockLimiterCommand;
+import brcomkassin.blockLimiter.inventory.InventoryType;
 import brcomkassin.blockLimiter.inventory.LimiterInventory;
-import brcomkassin.blockLimiter.listeners.BlockBreakListener;
-import brcomkassin.blockLimiter.listeners.BlockInteractListener;
-import brcomkassin.blockLimiter.listeners.BlockPlaceListener;
+import brcomkassin.blockLimiter.limiter.BlockLimiter;
 import brcomkassin.blockLimiter.listeners.InventoryClickListener;
 import brcomkassin.blockLimiter.listeners.InventoryCloseListener;
 import brcomkassin.blockLimiter.listeners.PistonListener;
-import brcomkassin.database.SQLiteManager;
-import brcomkassin.blockLimiter.limiter.BlockLimiter;
+import brcomkassin.blockLimiter.listeners.PacketBlockInteractListener;
+import brcomkassin.blockLimiter.listeners.PacketBlockPlaceListener;
+import brcomkassin.blockLimiter.listeners.PacketBlockBreakListener;
 import brcomkassin.config.ConfigManager;
+import brcomkassin.database.SQLiteManager;
+import net.kyori.adventure.text.Component;
 
 public final class BlockLimiterPlugin extends JavaPlugin {
 
@@ -25,6 +29,12 @@ public final class BlockLimiterPlugin extends JavaPlugin {
     public void onEnable() {
         ConfigManager.loadConfig();
         
+        if (getServer().getPluginManager().getPlugin("ProtocolLib") == null) {
+            getLogger().severe("ProtocolLib não encontrado! O plugin não funcionará corretamente.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
         SQLiteManager.connectAndCreateTables();
         try {
             BlockLimiter.loadGroupsFromDatabase();
@@ -33,22 +43,30 @@ public final class BlockLimiterPlugin extends JavaPlugin {
         }
         registerCommand();
         LimiterInventory.initializeInventory();
-        registerListeners(
-            new BlockPlaceListener(),
-            new BlockInteractListener(),
-            new BlockBreakListener(),
+
+        registerSimpleListeners(
             new InventoryClickListener(),
             new InventoryCloseListener(),
             new PistonListener()
         );
+
+        PacketBlockInteractListener.register(this);
+        PacketBlockPlaceListener.register(this);
+        PacketBlockBreakListener.register(this);
     }
 
     @Override
     public void onDisable() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (player.getOpenInventory().title()
+                    .equals(Component.text(InventoryType.LIMITER.getName()))) {
+                player.closeInventory();
+            }
+        }
         SQLiteManager.disconnect();
     }
 
-    private void registerListeners(Listener... listeners) {
+    private void registerSimpleListeners(Listener... listeners) {
         for (Listener listener : listeners) {
             getServer().getPluginManager().registerEvents(listener, this);
         }
