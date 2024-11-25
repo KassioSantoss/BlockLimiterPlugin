@@ -256,49 +256,6 @@ public class LimiterInventory {
         return 0;
     }
 
-    public static void addItemInInventory(String itemId, int playerCount, int limit) {
-        Material item = Material.getMaterial(itemId);
-
-        if (item == null) {
-            LOGGER.warning("[BlockLimiterPlugin]: Ocorreu um problema ao adicionar um item ao inventário, pois o item é nulo");
-            return;
-        }
-
-        ItemStack build = ItemBuilder.of(item)
-                .setLore("&c&lBlocos posicionados: &a" + playerCount + " &f/ &4" + limit)
-                .build();
-        build.setAmount(1);
-        INVENTORY.addItem(build);
-    }
-
-    public static void removeItemInInventory(ItemStack itemToRemove) {
-        for (int i = 0; i < INVENTORY.getSize(); i++) {
-            ItemStack item = INVENTORY.getItem(i);
-            if (item == null || item.getType() == Material.AIR) continue;
-
-            if (item.getType().name().equalsIgnoreCase(itemToRemove.getType().name())) {
-                INVENTORY.clear(i);
-            }
-        }
-        reorderInventory();
-    }
-
-    private static void reorderInventory() {
-        List<ItemStack> items = new ArrayList<>();
-
-        for (int i = 0; i < INVENTORY.getSize(); i++) {
-            ItemStack item = INVENTORY.getItem(i);
-            if (item != null && item.getType() != Material.AIR) {
-                items.add(item.clone());
-                INVENTORY.clear(i);
-            }
-        }
-
-        for (ItemStack item : items) {
-            INVENTORY.addItem(item);
-        }
-    }
-
     public static void refreshInventory() {
         try {
             if (currentInventory != null) {
