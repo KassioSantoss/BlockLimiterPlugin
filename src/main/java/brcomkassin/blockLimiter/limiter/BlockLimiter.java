@@ -299,15 +299,6 @@ public class BlockLimiter {
             
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    LOGGER.info(String.format(
-                        "[DEBUG] Bloco removido na posição exata %s,%d,%d,%d (Material: %s, Grupo: %s)",
-                        rs.getString("world"),
-                        rs.getInt("x"),
-                        rs.getInt("y"),
-                        rs.getInt("z"),
-                        material.name(),
-                        group.getGroupName()
-                    ));
                     recordBlockHistory(player, group.getGroupId(), material, location, "BREAK");
                     return; 
                 }
@@ -356,28 +347,8 @@ public class BlockLimiter {
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    LOGGER.info(String.format(
-                        "[DEBUG] Bloco removido em %s,%d,%d,%d (Material: %s, Grupo: %s, Distância: %.2f)",
-                        rs.getString("world"),
-                        rs.getInt("x"),
-                        rs.getInt("y"),
-                        rs.getInt("z"),
-                        material.name(),
-                        group.getGroupName(),
-                        Math.sqrt(rs.getDouble("distance"))
-                    ));
                     recordBlockHistory(player, group.getGroupId(), material, location, "BREAK");
-                } else {
-                    LOGGER.info(String.format(
-                        "[DEBUG] Nenhum bloco encontrado para remover em raio de 3 blocos de %s,%d,%d,%d (Material: %s, Grupo: %s)",
-                        location.getWorld().getName(),
-                        location.getBlockX(),
-                        location.getBlockY(),
-                        location.getBlockZ(),
-                        material.name(),
-                        group.getGroupName()
-                    ));
-                }
+                } 
             }
         }
     }
