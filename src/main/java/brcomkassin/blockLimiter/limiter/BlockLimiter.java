@@ -307,26 +307,8 @@ public class BlockLimiter {
         verifyAndCleanPlacedBlocks(player, group.getGroupId());
     }
 
-    public static int getBlockLimit(String groupId) throws SQLException {
-        String query = "SELECT block_limit_value FROM block_limit WHERE group_id = ?";
-        try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
-            ps.setString(1, groupId);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt("block_limit_value");
-                }
-            }
-        }
-        return 0;
-    }
-
     public static boolean isLimitedBlock(Material material) {
         return findGroupForMaterial(material) != null;
-    }
-
-    public static boolean isLimitedBlock(String materialName) {
-        Material material = Material.getMaterial(materialName);
-        return material != null && isLimitedBlock(material);
     }
 
     public static boolean verifyAndCleanPlacedBlocks(Player player, String groupId) throws SQLException {
@@ -434,25 +416,7 @@ public class BlockLimiter {
             }
         }
         
-        LOGGER.log(Level.INFO, "Carregados {0} grupos com suas configura\u00e7\u00f5es", blockGroups.size());
-    }
-
-    public static boolean isBlockRegistered(Location location) {
-        String query = "SELECT COUNT(*) as count FROM placed_blocks WHERE world = ? AND x = ? AND y = ? AND z = ?";
-        try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
-            ps.setString(1, location.getWorld().getName());
-            ps.setInt(2, location.getBlockX());
-            ps.setInt(3, location.getBlockY());
-            ps.setInt(4, location.getBlockZ());
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt("count") > 0;
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Erro ao verificar bloco registrado", e);
-        }
-        return false;
+        LOGGER.log(Level.INFO, "Carregados {0} grupos com suas configurações", blockGroups.size());
     }
 
     private static void removeBlockFromDatabase(Location location) {
@@ -497,10 +461,6 @@ public class BlockLimiter {
             LOGGER.log(Level.SEVERE, "Erro ao verificar bloco registrado", e);
         }
         return null;
-    }
-
-    public static boolean isBlockRegistered(Location location, Material material) {
-        return findRegisteredBlock(location, material) != null;
     }
 
 }
