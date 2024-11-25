@@ -289,54 +289,96 @@ public class BlockLimiter {
         BlockGroup group = findGroupForMaterial(material);
         if (group == null) return;
 
-        String query = """
-            WITH closest_block AS (
-                SELECT world, x, y, z 
-                FROM placed_blocks 
-                WHERE world = ? 
-                AND x BETWEEN ? AND ? 
-                AND y BETWEEN ? AND ? 
-                AND z BETWEEN ? AND ? 
-                AND item_id = ?
-                ORDER BY (
-                    POW(x - ?, 2) + 
-                    POW(y - ?, 2) + 
-                    POW(z - ?, 2)
-                ) ASC 
+        String exactQuery = "DELETE FROM placed_blocks WHERE world = ? AND x = ? AND y = ? AND z = ? RETURNING world, x, y, z";
+
+        try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(exactQuery)) {
+            ps.setString(1, location.getWorld().getName());
+            ps.setInt(2, location.getBlockX());
+            ps.setInt(3, location.getBlockY());
+            ps.setInt(4, location.getBlockZ());
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    LOGGER.info(String.format(
+                        "[DEBUG] Bloco removido na posição exata %s,%d,%d,%d (Material: %s, Grupo: %s)",
+                        rs.getString("world"),
+                        rs.getInt("x"),
+                        rs.getInt("y"),
+                        rs.getInt("z"),
+                        material.name(),
+                        group.getGroupName()
+                    ));
+                    recordBlockHistory(player, group.getGroupId(), material, location, "BREAK");
+                    return; 
+                }
+            }
+        }
+
+        String nearestQuery = """
+            WITH nearest_block AS (
+                SELECT pb.world, pb.x, pb.y, pb.z,
+                       (POW(pb.x - ?, 2) + POW(pb.y - ?, 2) + POW(pb.z - ?, 2)) as distance
+                FROM placed_blocks pb
+                WHERE pb.world = ? 
+                AND pb.x BETWEEN ? AND ? 
+                AND pb.y BETWEEN ? AND ? 
+                AND pb.z BETWEEN ? AND ? 
+                AND (pb.item_id = ? OR pb.group_id = ?)
+                ORDER BY distance ASC
                 LIMIT 1
             )
             DELETE FROM placed_blocks 
             WHERE EXISTS (
-                SELECT 1 FROM closest_block 
-                WHERE placed_blocks.world = closest_block.world 
-                AND placed_blocks.x = closest_block.x 
-                AND placed_blocks.y = closest_block.y 
-                AND placed_blocks.z = closest_block.z
+                SELECT 1 FROM nearest_block 
+                WHERE placed_blocks.world = nearest_block.world 
+                AND placed_blocks.x = nearest_block.x 
+                AND placed_blocks.y = nearest_block.y 
+                AND placed_blocks.z = nearest_block.z
             )
-            RETURNING world, x, y, z
+            RETURNING world, x, y, z, (
+                SELECT distance FROM nearest_block
+            ) as distance
         """;
 
-        boolean removed;
-        try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
-            ps.setString(1, location.getWorld().getName());
-            ps.setInt(2, location.getBlockX() - 3);
-            ps.setInt(3, location.getBlockX() + 3);
-            ps.setInt(4, location.getBlockY() - 3);
-            ps.setInt(5, location.getBlockY() + 3);
-            ps.setInt(6, location.getBlockZ() - 3);
-            ps.setInt(7, location.getBlockZ() + 3);
-            ps.setString(8, material.name());
-            ps.setInt(9, location.getBlockX());
-            ps.setInt(10, location.getBlockY());
-            ps.setInt(11, location.getBlockZ());
+        try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(nearestQuery)) {
+            ps.setInt(1, location.getBlockX());
+            ps.setInt(2, location.getBlockY());
+            ps.setInt(3, location.getBlockZ());
+            ps.setString(4, location.getWorld().getName());
+            ps.setInt(5, location.getBlockX() - 3);
+            ps.setInt(6, location.getBlockX() + 3);
+            ps.setInt(7, location.getBlockY() - 3);
+            ps.setInt(8, location.getBlockY() + 3);
+            ps.setInt(9, location.getBlockZ() - 3);
+            ps.setInt(10, location.getBlockZ() + 3);
+            ps.setString(11, material.name());
+            ps.setString(12, group.getGroupId());
 
             try (ResultSet rs = ps.executeQuery()) {
-                removed = rs.next();
+                if (rs.next()) {
+                    LOGGER.info(String.format(
+                        "[DEBUG] Bloco removido em %s,%d,%d,%d (Material: %s, Grupo: %s, Distância: %.2f)",
+                        rs.getString("world"),
+                        rs.getInt("x"),
+                        rs.getInt("y"),
+                        rs.getInt("z"),
+                        material.name(),
+                        group.getGroupName(),
+                        Math.sqrt(rs.getDouble("distance"))
+                    ));
+                    recordBlockHistory(player, group.getGroupId(), material, location, "BREAK");
+                } else {
+                    LOGGER.info(String.format(
+                        "[DEBUG] Nenhum bloco encontrado para remover em raio de 3 blocos de %s,%d,%d,%d (Material: %s, Grupo: %s)",
+                        location.getWorld().getName(),
+                        location.getBlockX(),
+                        location.getBlockY(),
+                        location.getBlockZ(),
+                        material.name(),
+                        group.getGroupName()
+                    ));
+                }
             }
-        }
-
-        if (removed) {
-            recordBlockHistory(player, group.getGroupId(), material, location, "BREAK");
         }
     }
 

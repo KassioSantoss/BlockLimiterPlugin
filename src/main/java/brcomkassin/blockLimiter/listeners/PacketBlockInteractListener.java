@@ -2,8 +2,8 @@ package brcomkassin.blockLimiter.listeners;
 
 import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
-import java.util.logging.Level;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -18,8 +18,6 @@ import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.reflect.FieldAccessException;
-import com.comphenix.protocol.wrappers.BlockPosition;
-import com.comphenix.protocol.wrappers.EnumWrappers.PlayerDigType;
 
 import brcomkassin.BlockLimiterPlugin;
 import brcomkassin.blockLimiter.limiter.BlockLimiter;
@@ -44,7 +42,6 @@ public class PacketBlockInteractListener {
 
                     java.lang.reflect.Method getBlockPos = hitResult.getClass().getMethod("a");
                     Object blockPosNMS = getBlockPos.invoke(hitResult);
-                    
                     if (blockPosNMS == null) return;
 
                     java.lang.reflect.Method getX = blockPosNMS.getClass().getMethod("u");
@@ -59,7 +56,39 @@ public class PacketBlockInteractListener {
                     Block block = location.getBlock();
 
                     if (block.getType() == Material.AIR) return;
-                    if (!BlockLimiter.isLimitedBlock(block.getType())) return;
+
+                    boolean isCurrentBlockLimited = BlockLimiter.isLimitedBlock(block.getType());
+                    Material originalType = block.getType();
+                    Location finalLocation = location;
+
+                    if (!isCurrentBlockLimited) {
+                        Block nearestLimitedBlock = null;
+                        double nearestDistance = Double.MAX_VALUE;
+
+                        for (int dx = -3; dx <= 3; dx++) {
+                            for (int dy = -3; dy <= 3; dy++) {
+                                for (int dz = -3; dz <= 3; dz++) {
+                                    Location nearbyLoc = location.clone().add(dx, dy, dz);
+                                    Block nearbyBlock = nearbyLoc.getBlock();
+                                    if (BlockLimiter.isLimitedBlock(nearbyBlock.getType())) {
+                                        double distance = location.distanceSquared(nearbyLoc);
+                                        if (distance < nearestDistance) {
+                                            nearestDistance = distance;
+                                            nearestLimitedBlock = nearbyBlock;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (nearestLimitedBlock != null) {
+                            originalType = nearestLimitedBlock.getType();
+                            finalLocation = nearestLimitedBlock.getLocation();
+                            isCurrentBlockLimited = true;
+                        }
+                    }
+
+                    if (!isCurrentBlockLimited) return;
 
                     String itemId = player.getInventory().getItemInMainHand().getType().name();
                     if (ConfigManager.isBlockedItem(itemId)) {
@@ -68,60 +97,32 @@ public class PacketBlockInteractListener {
                         return;
                     }
 
-                    scheduleBlockChecks(block, player, location);
+                    AtomicBoolean processed = new AtomicBoolean(false);
+                    final Material finalType = originalType;
+                    final Location finalLoc = finalLocation;
+
+                    for (int delay : new int[]{1, 2}) {
+                        org.bukkit.Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                            try {
+                                if (processed.get()) return;
+
+                                Material currentType = finalLoc.getBlock().getType();
+                                if (currentType == Material.AIR) {
+                                    if (processed.compareAndSet(false, true)) {
+                                        BlockLimiter.recordBlockBreak(player, finalType, finalLoc);
+                                    }
+                                }
+                            } catch (SQLException e) {
+                                LOGGER.log(Level.SEVERE, 
+                                    "Erro ao processar verificação do bloco para o jogador " + player.getName(), e);
+                            }
+                        }, delay);
+                    }
 
                 } catch (FieldAccessException | IllegalAccessException | IllegalArgumentException | NoSuchMethodException | SecurityException | InvocationTargetException e) {
                     LOGGER.log(Level.SEVERE, "Erro ao processar pacote USE_ITEM", e);
                 }
             }
         });
-
-        protocolManager.addPacketListener(new PacketAdapter(plugin, PacketType.Play.Client.BLOCK_DIG) {
-            @Override
-            public void onPacketReceiving(PacketEvent event) {
-                try {
-                    PacketContainer packet = event.getPacket();
-                    PlayerDigType digType = packet.getPlayerDigTypes().read(0);
-                    
-                    if (digType != PlayerDigType.START_DESTROY_BLOCK && 
-                        digType != PlayerDigType.ABORT_DESTROY_BLOCK && 
-                        digType != PlayerDigType.STOP_DESTROY_BLOCK) return;
-
-                    Player player = event.getPlayer();
-                    BlockPosition blockPosition = packet.getBlockPositionModifier().read(0);
-                    Location location = blockPosition.toLocation(player.getWorld());
-                    Block block = location.getBlock();
-
-                    if (block.getType() == Material.AIR) return;
-                    if (!BlockLimiter.isLimitedBlock(block.getType())) return;
-
-                    scheduleBlockChecks(block, player, location);
-                } catch (FieldAccessException e) {
-                    LOGGER.log(Level.SEVERE, "Erro ao processar pacote BLOCK_DIG", e);
-                }
-            }
-        });
-    }
-
-    private static void scheduleBlockChecks(Block block, Player player, Location blockLocation) {
-        AtomicBoolean processed = new AtomicBoolean(false);
-        Material originalType = block.getType();
-
-        for (int delay : new int[]{2, 6, 10}) {
-            org.bukkit.Bukkit.getScheduler().runTaskLater(BlockLimiterPlugin.getInstance(), () -> {
-                try {
-                    if (processed.get()) return;
-
-                    Material currentType = block.getType();
-                    if (currentType == Material.AIR) {
-                        BlockLimiter.recordBlockBreak(player, originalType, blockLocation);
-                        processed.set(true);
-                    }
-                } catch (SQLException e) {
-                    LOGGER.log(Level.SEVERE, 
-                        "Erro ao processar verificação do bloco para o jogador " + player.getName(), e);
-                }
-            }, delay);
-        }
     }
 } 
