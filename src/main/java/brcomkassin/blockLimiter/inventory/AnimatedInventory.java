@@ -115,7 +115,7 @@ public class AnimatedInventory {
             }
 
             int blockCount = BlockLimiter.getPlacedBlockCount(player.getUniqueId(), group.getGroupId());
-            ItemStack item = InventoryItemBuilder.buildGroupItem(group, currentMaterial, player.getUniqueId(), blockCount);
+            ItemStack item = InventoryItemBuilder.buildGroupItem(group, currentMaterial, blockCount);
             
             player.getOpenInventory().getTopInventory().setItem(slot, item);
         } catch (SQLException e) {

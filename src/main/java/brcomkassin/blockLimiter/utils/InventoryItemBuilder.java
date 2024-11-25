@@ -3,17 +3,15 @@ package brcomkassin.blockLimiter.utils;
 import brcomkassin.blockLimiter.limiter.BlockGroup;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
-import brcomkassin.utils.ItemBuilder;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class InventoryItemBuilder {
     
-    public static ItemStack buildGroupItem(BlockGroup group, Material currentMaterial, UUID playerUuid, int blockCount) {
+    public static ItemStack buildGroupItem(BlockGroup group, Material currentMaterial, int blockCount) {
         String groupName = formatGroupName(group.getGroupName());
         List<String> lore = buildGroupLore(group, currentMaterial, blockCount);
         
