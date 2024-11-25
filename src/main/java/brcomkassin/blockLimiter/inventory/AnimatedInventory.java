@@ -2,7 +2,6 @@ package brcomkassin.blockLimiter.inventory;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +9,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -20,7 +18,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import brcomkassin.BlockLimiterPlugin;
 import brcomkassin.blockLimiter.limiter.BlockGroup;
 import brcomkassin.blockLimiter.limiter.BlockLimiter;
-import brcomkassin.utils.ItemBuilder;
+import brcomkassin.blockLimiter.utils.InventoryItemBuilder;
 
 public class AnimatedInventory {
     private static final Logger LOGGER = Logger.getLogger("BlockLimiter");
@@ -82,7 +80,7 @@ public class AnimatedInventory {
                     currentIndexes.forEach((slot, index) -> {
                         index.incrementAndGet();
                         try {
-                            updateSlot(player, slot);
+                            updateSlot(slot, player);
                         } catch (Exception e) {
                             LOGGER.log(Level.SEVERE, "Erro ao atualizar slot durante animação", e);
                             stopAnimation(player);
@@ -105,45 +103,24 @@ public class AnimatedInventory {
         PLAYER_INDEXES.remove(playerUuid);
     }
 
-    private static void updateSlot(Player player, int slot) {
-        Material currentMaterial = getCurrentMaterial(slot, player.getUniqueId());
-        if (currentMaterial == null) return;
-
-        BlockGroup group = SLOT_GROUP_MAP.get(slot);
-        if (group == null) return;
-
+    public static void updateSlot(int slot, Player player) {
         try {
-            List<String> lore = new ArrayList<>();
-            lore.add("&7Seus blocos: &a" + BlockLimiter.getPlacedBlockCount(player.getUniqueId(), group.getGroupId()) + " &7/ &c" + group.getLimit());
-            lore.add("");
-            lore.add("&7Blocos neste grupo:");
+            Material currentMaterial = getCurrentMaterial(slot, player.getUniqueId());
+            if (currentMaterial == null) return;
 
-            group.getMaterials().forEach(material -> {
-                String prefix = material.equals(currentMaterial) ? "&a" : "&7";
-                lore.add("&8- " + prefix + formatMaterialName(material.name()));
-            });
+            BlockGroup group = BlockLimiter.findGroupForMaterial(currentMaterial);
+            if (group == null) {
+                LOGGER.log(Level.WARNING, "Grupo não encontrado para o material {0}", currentMaterial);
+                return;
+            }
 
-            ItemStack item = new ItemBuilder(currentMaterial)
-                    .setName("&6" + formatGroupName(group.getGroupName()))
-                    .setLore(lore)
-                    .build();
-
+            int blockCount = BlockLimiter.getPlacedBlockCount(player.getUniqueId(), group.getGroupId());
+            ItemStack item = InventoryItemBuilder.buildGroupItem(group, currentMaterial, player.getUniqueId(), blockCount);
+            
             player.getOpenInventory().getTopInventory().setItem(slot, item);
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Erro ao atualizar slot do inventário", e);
         }
-    }
-
-    private static String formatMaterialName(String name) {
-        return Arrays.stream(name.split("_"))
-                .map(word -> word.substring(0, 1).toUpperCase() + word.substring(1).toLowerCase())
-                .collect(Collectors.joining(" "));
-    }
-
-    private static String formatGroupName(String name) {
-        return Arrays.stream(name.split("_"))
-                .map(word -> word.substring(0, 1).toUpperCase() + word.substring(1).toLowerCase())
-                .collect(Collectors.joining(" "));
     }
 
     public static void debugState(Player player) {
