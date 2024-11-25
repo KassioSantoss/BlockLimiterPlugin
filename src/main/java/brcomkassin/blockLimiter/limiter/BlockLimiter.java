@@ -362,15 +362,15 @@ public class BlockLimiter {
                 String deleteQuery = "DELETE FROM placed_blocks WHERE player_uuid = ? AND group_id = ? AND world = ? AND x = ? AND y = ? AND z = ?";
                 try (PreparedStatement deletePs = SQLiteManager.getConnection().prepareStatement(deleteQuery)) {
                     for (PlacedBlock block : blocksToRemove) {
-                        deletePs.setString(1, block.getPlayerUuid().toString());
-                        deletePs.setString(2, block.getGroupId());
-                        deletePs.setString(3, block.getLocation().getWorld() != null ? block.getLocation().getWorld().getName() : "");
-                        deletePs.setInt(4, block.getLocation().getBlockX());
-                        deletePs.setInt(5, block.getLocation().getBlockY());
-                        deletePs.setInt(6, block.getLocation().getBlockZ());
+                        deletePs.setString(1, block.playerUuid().toString());
+                        deletePs.setString(2, block.groupId());
+                        deletePs.setString(3, block.location().getWorld() != null ? block.location().getWorld().getName() : "");
+                        deletePs.setInt(4, block.location().getBlockX());
+                        deletePs.setInt(5, block.location().getBlockY());
+                        deletePs.setInt(6, block.location().getBlockZ());
                         deletePs.executeUpdate();
                         
-                        recordBlockHistory(player, groupId, block.getMaterial(), block.getLocation(), "REMOVED_INVALID");
+                        recordBlockHistory(player, groupId, block.material(), block.location(), "REMOVED_INVALID");
                     }
                 }
             }
