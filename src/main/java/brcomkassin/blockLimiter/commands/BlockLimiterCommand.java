@@ -121,7 +121,7 @@ public class BlockLimiterCommand implements TabExecutor {
         }
     }
 
-    private void handleAddToGroup(Player player, String[] args) throws SQLException {
+    private void handleAddToGroup(Player player, String[] args) {
         if (args.length < 2) {
             Message.Chat.send(player, ConfigManager.getMessage("commands.errors.wrong-usage", 
                 "usage", "/limites adicionar <nome_grupo>"));
@@ -165,7 +165,7 @@ public class BlockLimiterCommand implements TabExecutor {
         Message.Chat.send(player, ConfigManager.getMessage("commands.group-deleted"));
     }
 
-    private void handleUpdateLimit(Player player, String[] args) throws SQLException {
+    private void handleUpdateLimit(Player player, String[] args) {
         if (args.length < 3) {
             Message.Chat.send(player, ConfigManager.getMessage("commands.errors.wrong-usage", 
                 "usage", "/limites limite <nome_grupo> <novo_limite>"));
