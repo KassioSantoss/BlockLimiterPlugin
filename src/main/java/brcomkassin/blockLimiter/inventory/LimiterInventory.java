@@ -3,13 +3,10 @@ package brcomkassin.blockLimiter.inventory;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -20,8 +17,9 @@ import org.bukkit.inventory.ItemStack;
 
 import brcomkassin.blockLimiter.limiter.BlockGroup;
 import brcomkassin.blockLimiter.limiter.BlockLimiter;
+import brcomkassin.blockLimiter.utils.InventoryItemBuilder;
 import brcomkassin.database.SQLiteManager;
-import brcomkassin.utils.ItemBuilder;
+import brcomkassin.blockLimiter.utils.ItemBuilder;
 import net.kyori.adventure.text.Component;
 
 public class LimiterInventory {
@@ -83,84 +81,17 @@ public class LimiterInventory {
         int slot = 0;
         for (int i = startIndex; i < endIndex; i++) {
             BlockGroup group = groups.get(i);
-            if (slot >= CONTENT_SLOTS.length) {
-                break;
-            }
+            if (slot >= CONTENT_SLOTS.length) break;
             
             int actualSlot = CONTENT_SLOTS[slot++];
             AnimatedInventory.SLOT_GROUP_MAP.put(actualSlot, group);
-            updateSlot(actualSlot, null);
-        }
-    }
-
-    public static void updateSlot(int slot, Player player) {
-        Material currentMaterial;
-        if (player != null) {
-            currentMaterial = AnimatedInventory.getCurrentMaterial(slot, player.getUniqueId());
-        } else {
-            BlockGroup group = null;
-            for (BlockGroup g : BlockLimiter.getAllGroups()) {
-                if (!g.getMaterials().isEmpty()) {
-                    group = g;
-                    break;
-                }
-            }
-            if (group == null) return;
-            currentMaterial = group.getMaterials().iterator().next();
-        }
-
-        if (currentMaterial == null) {
-            return;
-        }
-
-        BlockGroup group = BlockLimiter.findGroupForMaterial(currentMaterial);
-        if (group == null) {
-            LOGGER.log(Level.WARNING, "Grupo não encontrado para o material {0} no slot {1}", 
-                new Object[]{currentMaterial, slot});
-            return;
-        }
-
-        String groupName = capitalizeGroupName(group.getGroupName());
-        List<String> lore = new ArrayList<>();
-        
-        try {
-            UUID playerUuid = player != null ? player.getUniqueId() : null;
-            int totalPlaced = getPlayerBlockCount(playerUuid, group.getGroupId());
-            lore.add("&7Blocos no chão: &a" + totalPlaced + " &7/ &c" + group.getLimit());
-            lore.add("");
-            lore.add("&7Blocos neste grupo:");
             
-            group.getMaterials().stream()
-                    .map(material -> "&8- &7" + formatMaterialName(material.name()))
-                    .forEach(lore::add);
-                    
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Erro ao atualizar slot", e);
-            return;
+            Material initialMaterial = group.getMaterials().iterator().next();
+            int totalPlaced = getPlayerBlockCount(null, group.getGroupId());
+            
+            ItemStack item = InventoryItemBuilder.buildGroupItem(group, initialMaterial, totalPlaced);
+            INVENTORY.setItem(actualSlot, item);
         }
-
-        ItemStack item = new ItemBuilder(currentMaterial)
-                .setName("&6" + groupName)
-                .setLore(lore)
-                .build();
-
-        if (player != null) {
-            player.getOpenInventory().setItem(slot, item);
-        } else {
-            INVENTORY.setItem(slot, item);
-        }
-    }
-
-    private static String capitalizeGroupName(String name) {
-        return Arrays.stream(name.split("_"))
-                .map(word -> word.substring(0, 1).toUpperCase() + word.substring(1).toLowerCase())
-                .collect(Collectors.joining(" "));
-    }
-
-    private static String formatMaterialName(String name) {
-        return Arrays.stream(name.split("_"))
-                .map(word -> word.substring(0, 1).toUpperCase() + word.substring(1).toLowerCase())
-                .collect(Collectors.joining(" "));
     }
 
     public static void openInventory(Player player) throws SQLException {
@@ -198,25 +129,11 @@ public class LimiterInventory {
             AnimatedInventory.registerSlot(actualSlot, group, player);
             
             Material initialMaterial = group.getMaterials().iterator().next();
-            List<String> lore = new ArrayList<>();
-            lore.add("&7Seus blocos: &a" + BlockLimiter.getPlacedBlockCount(player.getUniqueId(), group.getGroupId()) + " &7/ &c" + group.getLimit());
-            lore.add("");
-            lore.add("&7Blocos neste grupo:");
-            group.getMaterials().forEach(material -> {
-                String prefix = material.equals(initialMaterial) ? "&a" : "&7";
-                lore.add("&8- " + prefix + formatMaterialName(material.name()));
-            });
-
-            ItemStack item = new ItemBuilder(initialMaterial)
-                    .setName("&6" + formatGroupName(group.getGroupName()))
-                    .setLore(lore)
-                    .build();
+            int blockCount = BlockLimiter.getPlacedBlockCount(player.getUniqueId(), group.getGroupId());
             
+            ItemStack item = InventoryItemBuilder.buildGroupItem(group, initialMaterial, blockCount);
             inventory.setItem(actualSlot, item);
         }
-
-        AnimatedInventory.startAnimation(player);
-        // AnimatedInventory.debugState(player);
     }
 
     private static void setupBorder(Inventory inventory) {
@@ -254,49 +171,6 @@ public class LimiterInventory {
             }
         }
         return 0;
-    }
-
-    public static void addItemInInventory(String itemId, int playerCount, int limit) {
-        Material item = Material.getMaterial(itemId);
-
-        if (item == null) {
-            LOGGER.warning("[BlockLimiterPlugin]: Ocorreu um problema ao adicionar um item ao inventário, pois o item é nulo");
-            return;
-        }
-
-        ItemStack build = ItemBuilder.of(item)
-                .setLore("&c&lBlocos posicionados: &a" + playerCount + " &f/ &4" + limit)
-                .build();
-        build.setAmount(1);
-        INVENTORY.addItem(build);
-    }
-
-    public static void removeItemInInventory(ItemStack itemToRemove) {
-        for (int i = 0; i < INVENTORY.getSize(); i++) {
-            ItemStack item = INVENTORY.getItem(i);
-            if (item == null || item.getType() == Material.AIR) continue;
-
-            if (item.getType().name().equalsIgnoreCase(itemToRemove.getType().name())) {
-                INVENTORY.clear(i);
-            }
-        }
-        reorderInventory();
-    }
-
-    private static void reorderInventory() {
-        List<ItemStack> items = new ArrayList<>();
-
-        for (int i = 0; i < INVENTORY.getSize(); i++) {
-            ItemStack item = INVENTORY.getItem(i);
-            if (item != null && item.getType() != Material.AIR) {
-                items.add(item.clone());
-                INVENTORY.clear(i);
-            }
-        }
-
-        for (ItemStack item : items) {
-            INVENTORY.addItem(item);
-        }
     }
 
     public static void refreshInventory() {
@@ -375,11 +249,5 @@ public class LimiterInventory {
                 refreshInventory();
             }
         }
-    }
-
-    private static String formatGroupName(String name) {
-        return Arrays.stream(name.split("_"))
-                .map(word -> word.substring(0, 1).toUpperCase() + word.substring(1).toLowerCase())
-                .collect(Collectors.joining(" "));
     }
 }

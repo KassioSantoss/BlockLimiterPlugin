@@ -3,6 +3,7 @@ package brcomkassin.blockLimiter.commands;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
 
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -12,13 +13,15 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import brcomkassin.BlockLimiterPlugin;
 import brcomkassin.blockLimiter.inventory.LimiterInventory;
 import brcomkassin.blockLimiter.limiter.BlockLimiter;
 import brcomkassin.config.ConfigManager;
-import brcomkassin.utils.Message;
+import brcomkassin.blockLimiter.utils.Message;
 import lombok.SneakyThrows;
 
 public class BlockLimiterCommand implements TabExecutor {
+    private static final java.util.logging.Logger LOGGER = BlockLimiterPlugin.getInstance().getLogger();
 
     @SneakyThrows
     @Override
@@ -113,12 +116,12 @@ public class BlockLimiterCommand implements TabExecutor {
                     "group", groupName));
             } else {
                 Message.Chat.send(player, ConfigManager.getMessage("commands.errors.database-error"));
-                e.printStackTrace();
+                LOGGER.log(Level.SEVERE, "Erro ao criar grupo " + groupName, e);
             }
         }
     }
 
-    private void handleAddToGroup(Player player, String[] args) throws SQLException {
+    private void handleAddToGroup(Player player, String[] args) {
         if (args.length < 2) {
             Message.Chat.send(player, ConfigManager.getMessage("commands.errors.wrong-usage", 
                 "usage", "/limites adicionar <nome_grupo>"));
@@ -145,7 +148,7 @@ public class BlockLimiterCommand implements TabExecutor {
                     "group", groupName));
             } else {
                 Message.Chat.send(player, ConfigManager.getMessage("commands.errors.database-error"));
-                e.printStackTrace();
+                LOGGER.log(Level.SEVERE, "Erro ao adicionar item ao grupo " + groupName, e);
             }
         }
     }
@@ -162,7 +165,7 @@ public class BlockLimiterCommand implements TabExecutor {
         Message.Chat.send(player, ConfigManager.getMessage("commands.group-deleted"));
     }
 
-    private void handleUpdateLimit(Player player, String[] args) throws SQLException {
+    private void handleUpdateLimit(Player player, String[] args) {
         if (args.length < 3) {
             Message.Chat.send(player, ConfigManager.getMessage("commands.errors.wrong-usage", 
                 "usage", "/limites limite <nome_grupo> <novo_limite>"));
@@ -221,7 +224,7 @@ public class BlockLimiterCommand implements TabExecutor {
                 Message.Chat.send(player, ConfigManager.getMessage("commands.errors.group-is-empty"));
             } else {
                 Message.Chat.send(player, ConfigManager.getMessage("commands.errors.database-error"));
-                e.printStackTrace();
+                LOGGER.log(Level.SEVERE, "Erro ao remover material " + material + " do grupo " + groupName, e);
             }
         }
     }

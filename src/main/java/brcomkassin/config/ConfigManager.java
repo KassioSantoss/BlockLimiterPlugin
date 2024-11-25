@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -28,7 +27,7 @@ public class ConfigManager {
         
         blockedItems.clear();
         List<String> items = config.getStringList("blocked-items");
-        blockedItems.addAll(items.stream().map(String::toLowerCase).collect(Collectors.toList()));
+        blockedItems.addAll(items.stream().map(String::toLowerCase).toList());
         
         LOGGER.log(Level.INFO, "Carregados {0} itens bloqueados da configuração", blockedItems.size());
     }
@@ -41,7 +40,7 @@ public class ConfigManager {
     public static String getMessage(String path) {
         String message = config.getString("messages." + path);
         if (message == null) {
-            LOGGER.log(Level.WARNING, "Mensagem n\u00e3o encontrada: {0}", path);
+            LOGGER.log(Level.WARNING, "Mensagem não encontrada: {0}", path);
             return "§cMensagem não configurada: " + path;
         }
         
@@ -61,11 +60,5 @@ public class ConfigManager {
         }
         
         return message;
-    }
-
-    public static void reloadConfig() {
-        BlockLimiterPlugin plugin = BlockLimiterPlugin.getInstance();
-        plugin.reloadConfig();
-        loadConfig();
     }
 } 
