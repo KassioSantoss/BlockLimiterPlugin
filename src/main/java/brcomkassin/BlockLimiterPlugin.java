@@ -17,8 +17,8 @@ import brcomkassin.blockLimiter.listeners.InventoryClickListener;
 import brcomkassin.blockLimiter.listeners.InventoryCloseListener;
 import brcomkassin.blockLimiter.listeners.PistonListener;
 import brcomkassin.blockLimiter.listeners.PacketBlockInteractListener;
-import brcomkassin.blockLimiter.listeners.PacketBlockPlaceListener;
 import brcomkassin.blockLimiter.listeners.PacketBlockBreakListener;
+import brcomkassin.blockLimiter.listeners.BlockPlaceListener;
 import brcomkassin.config.ConfigManager;
 import brcomkassin.database.SQLiteManager;
 import net.kyori.adventure.text.Component;
@@ -45,13 +45,13 @@ public final class BlockLimiterPlugin extends JavaPlugin {
         LimiterInventory.initializeInventory();
 
         registerSimpleListeners(
+            new BlockPlaceListener(),
             new InventoryClickListener(),
             new InventoryCloseListener(),
             new PistonListener()
         );
 
         PacketBlockInteractListener.register(this);
-        PacketBlockPlaceListener.register(this);
         PacketBlockBreakListener.register(this);
     }
 
