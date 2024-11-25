@@ -1,6 +1,7 @@
 package brcomkassin.blockLimiter.listeners;
 
 import java.lang.reflect.InvocationTargetException;
+import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -104,6 +105,7 @@ public class PacketBlockInteractListener {
 
     private static void scheduleBlockChecks(Block block, Player player, Location blockLocation) {
         AtomicBoolean processed = new AtomicBoolean(false);
+        Material originalType = block.getType();
 
         for (int delay : new int[]{2, 6, 10}) {
             org.bukkit.Bukkit.getScheduler().runTaskLater(BlockLimiterPlugin.getInstance(), () -> {
@@ -111,13 +113,11 @@ public class PacketBlockInteractListener {
                     if (processed.get()) return;
 
                     Material currentType = block.getType();
-                    boolean isRegistered = BlockLimiter.isBlockRegistered(blockLocation);
-                    
-                    if (currentType == Material.AIR && isRegistered) {
-                        BlockLimiter.removeBlockIfExists(blockLocation);
+                    if (currentType == Material.AIR) {
+                        BlockLimiter.recordBlockBreak(player, originalType, blockLocation);
                         processed.set(true);
                     }
-                } catch (Exception e) {
+                } catch (SQLException e) {
                     LOGGER.log(Level.SEVERE, 
                         "Erro ao processar verificação do bloco para o jogador " + player.getName(), e);
                 }
