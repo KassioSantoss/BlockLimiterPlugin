@@ -1,6 +1,7 @@
 package brcomkassin.blockLimiter.listeners;
 
 import java.util.logging.Level;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -40,7 +41,24 @@ public class BlockPlaceListener implements Listener {
                 return;
             }
 
-            BlockLimiter.recordBlockPlacement(player, material, location);
+            AtomicBoolean processed = new AtomicBoolean(false);
+            
+            for (int delay : new int[]{2, 6, 10}) {
+                org.bukkit.Bukkit.getScheduler().runTaskLater(BlockLimiterPlugin.getInstance(), () -> {
+                    try {
+                        if (processed.get()) return;
+
+                        if (location.getBlock().getType() == material) {
+                            BlockLimiter.recordBlockPlacement(player, material, location);
+                            processed.set(true);
+                        }
+                    } catch (Exception e) {
+                        LOGGER.log(Level.SEVERE, 
+                            "Erro ao registrar colocação do bloco para o jogador " + player.getName(), e);
+                    }
+                }, delay);
+            }
+
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, 
                 "Erro ao processar colocação do bloco para o jogador " + player.getName(), e);
