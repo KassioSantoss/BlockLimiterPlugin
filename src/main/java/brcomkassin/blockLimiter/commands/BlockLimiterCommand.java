@@ -17,7 +17,7 @@ import brcomkassin.BlockLimiterPlugin;
 import brcomkassin.blockLimiter.inventory.LimiterInventory;
 import brcomkassin.blockLimiter.limiter.BlockLimiter;
 import brcomkassin.config.ConfigManager;
-import brcomkassin.utils.Message;
+import brcomkassin.blockLimiter.utils.Message;
 import lombok.SneakyThrows;
 
 public class BlockLimiterCommand implements TabExecutor {

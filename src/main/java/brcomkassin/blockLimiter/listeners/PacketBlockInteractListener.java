@@ -4,7 +4,7 @@ import brcomkassin.BlockLimiterPlugin;
 import brcomkassin.blockLimiter.utils.BlockBreakUtil;
 import brcomkassin.blockLimiter.utils.BlockBreakUtil.LimitedBlockInfo;
 import brcomkassin.config.ConfigManager;
-import brcomkassin.utils.Message;
+import brcomkassin.blockLimiter.utils.Message;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;

@@ -15,7 +15,7 @@ import brcomkassin.BlockLimiterPlugin;
 import brcomkassin.blockLimiter.limiter.BlockGroup;
 import brcomkassin.blockLimiter.limiter.BlockLimiter;
 import brcomkassin.config.ConfigManager;
-import brcomkassin.utils.Message;
+import brcomkassin.blockLimiter.utils.Message;
 
 public class BlockPlaceListener implements Listener {
     private static final java.util.logging.Logger LOGGER = BlockLimiterPlugin.getInstance().getLogger();

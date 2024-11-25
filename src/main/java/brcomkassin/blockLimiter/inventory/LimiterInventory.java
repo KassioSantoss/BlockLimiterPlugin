@@ -19,7 +19,7 @@ import brcomkassin.blockLimiter.limiter.BlockGroup;
 import brcomkassin.blockLimiter.limiter.BlockLimiter;
 import brcomkassin.blockLimiter.utils.InventoryItemBuilder;
 import brcomkassin.database.SQLiteManager;
-import brcomkassin.utils.ItemBuilder;
+import brcomkassin.blockLimiter.utils.ItemBuilder;
 import net.kyori.adventure.text.Component;
 
 public class LimiterInventory {
@@ -89,7 +89,7 @@ public class LimiterInventory {
             Material initialMaterial = group.getMaterials().iterator().next();
             int totalPlaced = getPlayerBlockCount(null, group.getGroupId());
             
-            ItemStack item = InventoryItemBuilder.buildGroupItem(group, initialMaterial, null, totalPlaced);
+            ItemStack item = InventoryItemBuilder.buildGroupItem(group, initialMaterial, totalPlaced);
             INVENTORY.setItem(actualSlot, item);
         }
     }
@@ -131,7 +131,7 @@ public class LimiterInventory {
             Material initialMaterial = group.getMaterials().iterator().next();
             int blockCount = BlockLimiter.getPlacedBlockCount(player.getUniqueId(), group.getGroupId());
             
-            ItemStack item = InventoryItemBuilder.buildGroupItem(group, initialMaterial, player.getUniqueId(), blockCount);
+            ItemStack item = InventoryItemBuilder.buildGroupItem(group, initialMaterial, blockCount);
             inventory.setItem(actualSlot, item);
         }
     }
