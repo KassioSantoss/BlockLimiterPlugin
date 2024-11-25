@@ -111,6 +111,8 @@ public class BlockLimiter {
         BlockGroup group = findGroupForMaterial(material);
         if (group == null) return;
 
+        removeBlockFromDatabase(location);
+
         String query = "INSERT INTO placed_blocks (player_uuid, group_id, item_id, world, x, y, z) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
             ps.setString(1, player.getUniqueId().toString());
@@ -287,17 +289,55 @@ public class BlockLimiter {
         BlockGroup group = findGroupForMaterial(material);
         if (group == null) return;
 
-        String deleteQuery = "DELETE FROM placed_blocks WHERE player_uuid = ? AND world = ? AND x = ? AND y = ? AND z = ?";
-        try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(deleteQuery)) {
-            ps.setString(1, player.getUniqueId().toString());
-            ps.setString(2, location.getWorld().getName());
-            ps.setInt(3, location.getBlockX());
-            ps.setInt(4, location.getBlockY());
-            ps.setInt(5, location.getBlockZ());
-            ps.executeUpdate();
+        String query = """
+            WITH closest_block AS (
+                SELECT world, x, y, z 
+                FROM placed_blocks 
+                WHERE world = ? 
+                AND x BETWEEN ? AND ? 
+                AND y BETWEEN ? AND ? 
+                AND z BETWEEN ? AND ? 
+                AND item_id = ?
+                ORDER BY (
+                    POW(x - ?, 2) + 
+                    POW(y - ?, 2) + 
+                    POW(z - ?, 2)
+                ) ASC 
+                LIMIT 1
+            )
+            DELETE FROM placed_blocks 
+            WHERE EXISTS (
+                SELECT 1 FROM closest_block 
+                WHERE placed_blocks.world = closest_block.world 
+                AND placed_blocks.x = closest_block.x 
+                AND placed_blocks.y = closest_block.y 
+                AND placed_blocks.z = closest_block.z
+            )
+            RETURNING world, x, y, z
+        """;
+
+        boolean removed;
+        try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
+            ps.setString(1, location.getWorld().getName());
+            ps.setInt(2, location.getBlockX() - 3);
+            ps.setInt(3, location.getBlockX() + 3);
+            ps.setInt(4, location.getBlockY() - 3);
+            ps.setInt(5, location.getBlockY() + 3);
+            ps.setInt(6, location.getBlockZ() - 3);
+            ps.setInt(7, location.getBlockZ() + 3);
+            ps.setString(8, material.name());
+            ps.setInt(9, location.getBlockX());
+            ps.setInt(10, location.getBlockY());
+            ps.setInt(11, location.getBlockZ());
+
+            try (ResultSet rs = ps.executeQuery()) {
+                removed = rs.next();
+            }
         }
 
-        recordBlockHistory(player, group.getGroupId(), material, location, "BREAK");
+        if (removed) {
+            recordBlockHistory(player, group.getGroupId(), material, location, "BREAK");
+        }
     }
 
     public static int getBlockLimit(String groupId) throws SQLException {
@@ -430,12 +470,6 @@ public class BlockLimiter {
         LOGGER.log(Level.INFO, "Carregados {0} grupos com suas configura\u00e7\u00f5es", blockGroups.size());
     }
 
-    public static void removeBlockIfExists(Location location) {
-        if (isBlockRegistered(location)) {
-            removeBlockFromDatabase(location);
-        }
-    }
-
     public static boolean isBlockRegistered(Location location) {
         String query = "SELECT COUNT(*) as count FROM placed_blocks WHERE world = ? AND x = ? AND y = ? AND z = ?";
         try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
@@ -465,6 +499,41 @@ public class BlockLimiter {
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Erro ao remover bloco do banco de dados", e);
         }
+    }
+
+    public static Location findRegisteredBlock(Location location, Material material) {
+        String query = "SELECT world, x, y, z, item_id FROM placed_blocks WHERE " +
+                      "world = ? AND x BETWEEN ? AND ? AND y BETWEEN ? AND ? AND z BETWEEN ? AND ?";
+        try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
+            ps.setString(1, location.getWorld().getName());
+            ps.setInt(2, location.getBlockX() - 2);
+            ps.setInt(3, location.getBlockX() + 2);
+            ps.setInt(4, location.getBlockY() - 2);
+            ps.setInt(5, location.getBlockY() + 2);
+            ps.setInt(6, location.getBlockZ() - 2);
+            ps.setInt(7, location.getBlockZ() + 2);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String itemId = rs.getString("item_id");
+                    if (material.name().equals(itemId)) {
+                        return new Location(
+                            location.getWorld(),
+                            rs.getInt("x"),
+                            rs.getInt("y"),
+                            rs.getInt("z")
+                        );
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Erro ao verificar bloco registrado", e);
+        }
+        return null;
+    }
+
+    public static boolean isBlockRegistered(Location location, Material material) {
+        return findRegisteredBlock(location, material) != null;
     }
 
 }

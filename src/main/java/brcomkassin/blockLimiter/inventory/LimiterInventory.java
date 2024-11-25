@@ -306,7 +306,6 @@ public class LimiterInventory {
                     currentInventory.setItem(slot, null);
                 }
                 
-                // Reconfigurar o inventário
                 setupBorder(currentInventory);
                 
                 for (Player player : Bukkit.getOnlinePlayers()) {
