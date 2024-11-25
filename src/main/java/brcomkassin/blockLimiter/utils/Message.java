@@ -1,4 +1,4 @@
-package brcomkassin.utils;
+package brcomkassin.blockLimiter.utils;
 
 import java.util.Arrays;
 
