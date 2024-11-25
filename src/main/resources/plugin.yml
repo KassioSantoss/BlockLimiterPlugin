@@ -4,6 +4,7 @@ main: brcomkassin.BlockLimiterPlugin
 api-version: '1.20'
 description: 'Plugin para limitar a quantidade de blocos que um jogador pode colocar'
 author: Kassin
+depend: [ProtocolLib]
 
 commands:
   limites:

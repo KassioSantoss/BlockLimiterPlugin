@@ -467,4 +467,46 @@ public class BlockLimiter {
         }
     }
 
+    public static Location findRegisteredBlock(Location location, Material material) {
+        String query = "SELECT world, x, y, z, item_id FROM placed_blocks WHERE " +
+                      "world = ? AND x BETWEEN ? AND ? AND y BETWEEN ? AND ? AND z BETWEEN ? AND ?";
+        try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
+            ps.setString(1, location.getWorld().getName());
+            ps.setInt(2, location.getBlockX() - 2);
+            ps.setInt(3, location.getBlockX() + 2);
+            ps.setInt(4, location.getBlockY() - 2);
+            ps.setInt(5, location.getBlockY() + 2);
+            ps.setInt(6, location.getBlockZ() - 2);
+            ps.setInt(7, location.getBlockZ() + 2);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String itemId = rs.getString("item_id");
+                    if (material.name().equals(itemId)) {
+                        return new Location(
+                            location.getWorld(),
+                            rs.getInt("x"),
+                            rs.getInt("y"),
+                            rs.getInt("z")
+                        );
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Erro ao verificar bloco registrado", e);
+        }
+        return null;
+    }
+
+    public static boolean isBlockRegistered(Location location, Material material) {
+        return findRegisteredBlock(location, material) != null;
+    }
+
+    public static void removeBlockIfExists(Location location, Material material) {
+        Location registeredLocation = findRegisteredBlock(location, material);
+        if (registeredLocation != null) {
+            removeBlockFromDatabase(registeredLocation);
+        }
+    }
+
 }

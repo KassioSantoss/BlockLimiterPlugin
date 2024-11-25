@@ -37,6 +37,7 @@ public class ConfigManager {
         return blockedItems.contains(itemId.toLowerCase());
     }
 
+    @SuppressWarnings("deprecation")
     public static String getMessage(String path) {
         String message = config.getString("messages." + path);
         if (message == null) {
