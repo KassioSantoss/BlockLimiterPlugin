@@ -14,17 +14,7 @@ import java.util.logging.Level;
 public class BlockBreakUtil {
     private static final java.util.logging.Logger LOGGER = BlockLimiterPlugin.getInstance().getLogger();
 
-    public static class LimitedBlockInfo {
-        public final Material type;
-        public final Location location;
-        public final boolean isLimited;
-
-        public LimitedBlockInfo(Material type, Location location, boolean isLimited) {
-            this.type = type;
-            this.location = location;
-            this.isLimited = isLimited;
-        }
-    }
+    public record LimitedBlockInfo(Material type, Location location, boolean isLimited) {}
 
     public static LimitedBlockInfo findLimitedBlock(Block block) {
         Location location = block.getLocation();

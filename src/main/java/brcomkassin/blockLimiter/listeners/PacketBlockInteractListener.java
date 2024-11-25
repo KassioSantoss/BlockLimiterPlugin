@@ -34,7 +34,7 @@ public class PacketBlockInteractListener {
                         if (location.getBlock().getType() == Material.AIR) return;
 
                         LimitedBlockInfo blockInfo = BlockBreakUtil.findLimitedBlock(location.getBlock());
-                        if (!blockInfo.isLimited) return;
+                        if (!blockInfo.isLimited()) return;
 
                         if (isBlockedItem(event)) {
                             Message.Chat.send(event.getPlayer(), ConfigManager.getMessage("blocked-interaction"));
@@ -44,8 +44,8 @@ public class PacketBlockInteractListener {
 
                         BlockBreakUtil.scheduleBlockBreakCheck(
                             event.getPlayer(),
-                            blockInfo.type,
-                            blockInfo.location
+                            blockInfo.type(),
+                            blockInfo.location()
                         );
 
                     } catch (Exception e) {

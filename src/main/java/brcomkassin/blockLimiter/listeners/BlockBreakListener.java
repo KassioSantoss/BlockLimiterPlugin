@@ -16,12 +16,12 @@ public class BlockBreakListener implements Listener {
         try {
             LimitedBlockInfo blockInfo = BlockBreakUtil.findLimitedBlock(event.getBlock());
             
-            if (!blockInfo.isLimited) return;
+            if (!blockInfo.isLimited()) return;
             
             BlockBreakUtil.scheduleBlockBreakCheck(
                 event.getPlayer(),
-                blockInfo.type,
-                blockInfo.location
+                blockInfo.type(),
+                blockInfo.location()
             );
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Erro ao processar quebra de bloco", e);
