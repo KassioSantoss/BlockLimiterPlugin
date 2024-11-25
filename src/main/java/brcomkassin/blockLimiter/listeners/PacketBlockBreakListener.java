@@ -56,10 +56,8 @@ public class PacketBlockBreakListener {
                                 if (processed.get()) return;
                                 Material currentType = block.getType();
                                 if (currentType == Material.AIR) {
-                                    if (BlockLimiter.isBlockRegistered(location, originalType)) {
-                                        BlockLimiter.recordBlockBreak(player, originalType, location);
-                                        processed.set(true);
-                                    }
+                                    BlockLimiter.recordBlockBreak(player, originalType, location);
+                                    processed.set(true);
                                 }
                             } catch (SQLException e) {
                                 LOGGER.log(Level.SEVERE, 
@@ -67,11 +65,10 @@ public class PacketBlockBreakListener {
                             }  
                         }, delay);
                     }
-
-            } catch (FieldAccessException | IllegalArgumentException e) {
-                LOGGER.log(Level.SEVERE, "Erro ao processar pacote de quebra de bloco", e);
+                } catch (FieldAccessException | IllegalArgumentException e) {
+                    LOGGER.log(Level.SEVERE, "Erro ao processar pacote de quebra de bloco", e);
+                }
             }
-        }
-    });
-}
+        });
+    }
 } 
