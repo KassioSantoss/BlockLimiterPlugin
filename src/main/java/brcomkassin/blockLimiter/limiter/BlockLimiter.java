@@ -304,53 +304,7 @@ public class BlockLimiter {
                 }
             }
         }
-
-        String nearestQuery = """
-            WITH nearest_block AS (
-                SELECT pb.world, pb.x, pb.y, pb.z,
-                       (POW(pb.x - ?, 2) + POW(pb.y - ?, 2) + POW(pb.z - ?, 2)) as distance
-                FROM placed_blocks pb
-                WHERE pb.world = ? 
-                AND pb.x BETWEEN ? AND ? 
-                AND pb.y BETWEEN ? AND ? 
-                AND pb.z BETWEEN ? AND ? 
-                AND (pb.item_id = ? OR pb.group_id = ?)
-                ORDER BY distance ASC
-                LIMIT 1
-            )
-            DELETE FROM placed_blocks 
-            WHERE EXISTS (
-                SELECT 1 FROM nearest_block 
-                WHERE placed_blocks.world = nearest_block.world 
-                AND placed_blocks.x = nearest_block.x 
-                AND placed_blocks.y = nearest_block.y 
-                AND placed_blocks.z = nearest_block.z
-            )
-            RETURNING world, x, y, z, (
-                SELECT distance FROM nearest_block
-            ) as distance
-        """;
-
-        try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(nearestQuery)) {
-            ps.setInt(1, location.getBlockX());
-            ps.setInt(2, location.getBlockY());
-            ps.setInt(3, location.getBlockZ());
-            ps.setString(4, location.getWorld().getName());
-            ps.setInt(5, location.getBlockX() - 3);
-            ps.setInt(6, location.getBlockX() + 3);
-            ps.setInt(7, location.getBlockY() - 3);
-            ps.setInt(8, location.getBlockY() + 3);
-            ps.setInt(9, location.getBlockZ() - 3);
-            ps.setInt(10, location.getBlockZ() + 3);
-            ps.setString(11, material.name());
-            ps.setString(12, group.getGroupId());
-
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    recordBlockHistory(player, group.getGroupId(), material, location, "BREAK");
-                } 
-            }
-        }
+        verifyAndCleanPlacedBlocks(player, group.getGroupId());
     }
 
     public static int getBlockLimit(String groupId) throws SQLException {
