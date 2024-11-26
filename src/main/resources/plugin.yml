@@ -1,5 +1,5 @@
 name: BlockLimiter
-version: '1.0'
+version: '2.0'
 main: brcomkassin.BlockLimiterPlugin
 api-version: '1.20'
 description: 'Plugin para limitar a quantidade de blocos que um jogador pode colocar'
