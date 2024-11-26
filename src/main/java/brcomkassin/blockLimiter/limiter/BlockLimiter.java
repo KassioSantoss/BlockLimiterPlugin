@@ -289,77 +289,26 @@ public class BlockLimiter {
         BlockGroup group = findGroupForMaterial(material);
         if (group == null) return;
 
-        String query = """
-            WITH closest_block AS (
-                SELECT world, x, y, z 
-                FROM placed_blocks 
-                WHERE world = ? 
-                AND x BETWEEN ? AND ? 
-                AND y BETWEEN ? AND ? 
-                AND z BETWEEN ? AND ? 
-                AND item_id = ?
-                ORDER BY (
-                    POW(x - ?, 2) + 
-                    POW(y - ?, 2) + 
-                    POW(z - ?, 2)
-                ) ASC 
-                LIMIT 1
-            )
-            DELETE FROM placed_blocks 
-            WHERE EXISTS (
-                SELECT 1 FROM closest_block 
-                WHERE placed_blocks.world = closest_block.world 
-                AND placed_blocks.x = closest_block.x 
-                AND placed_blocks.y = closest_block.y 
-                AND placed_blocks.z = closest_block.z
-            )
-            RETURNING world, x, y, z
-        """;
+        String exactQuery = "DELETE FROM placed_blocks WHERE world = ? AND x = ? AND y = ? AND z = ? RETURNING world, x, y, z";
 
-        boolean removed;
-        try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
+        try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(exactQuery)) {
             ps.setString(1, location.getWorld().getName());
-            ps.setInt(2, location.getBlockX() - 3);
-            ps.setInt(3, location.getBlockX() + 3);
-            ps.setInt(4, location.getBlockY() - 3);
-            ps.setInt(5, location.getBlockY() + 3);
-            ps.setInt(6, location.getBlockZ() - 3);
-            ps.setInt(7, location.getBlockZ() + 3);
-            ps.setString(8, material.name());
-            ps.setInt(9, location.getBlockX());
-            ps.setInt(10, location.getBlockY());
-            ps.setInt(11, location.getBlockZ());
-
-            try (ResultSet rs = ps.executeQuery()) {
-                removed = rs.next();
-            }
-        }
-
-        if (removed) {
-            recordBlockHistory(player, group.getGroupId(), material, location, "BREAK");
-        }
-    }
-
-    public static int getBlockLimit(String groupId) throws SQLException {
-        String query = "SELECT block_limit_value FROM block_limit WHERE group_id = ?";
-        try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
-            ps.setString(1, groupId);
+            ps.setInt(2, location.getBlockX());
+            ps.setInt(3, location.getBlockY());
+            ps.setInt(4, location.getBlockZ());
+            
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getInt("block_limit_value");
+                    recordBlockHistory(player, group.getGroupId(), material, location, "BREAK");
+                    return; 
                 }
             }
         }
-        return 0;
+        verifyAndCleanPlacedBlocks(player, group.getGroupId());
     }
 
     public static boolean isLimitedBlock(Material material) {
         return findGroupForMaterial(material) != null;
-    }
-
-    public static boolean isLimitedBlock(String materialName) {
-        Material material = Material.getMaterial(materialName);
-        return material != null && isLimitedBlock(material);
     }
 
     public static boolean verifyAndCleanPlacedBlocks(Player player, String groupId) throws SQLException {
@@ -413,15 +362,15 @@ public class BlockLimiter {
                 String deleteQuery = "DELETE FROM placed_blocks WHERE player_uuid = ? AND group_id = ? AND world = ? AND x = ? AND y = ? AND z = ?";
                 try (PreparedStatement deletePs = SQLiteManager.getConnection().prepareStatement(deleteQuery)) {
                     for (PlacedBlock block : blocksToRemove) {
-                        deletePs.setString(1, block.getPlayerUuid().toString());
-                        deletePs.setString(2, block.getGroupId());
-                        deletePs.setString(3, block.getLocation().getWorld() != null ? block.getLocation().getWorld().getName() : "");
-                        deletePs.setInt(4, block.getLocation().getBlockX());
-                        deletePs.setInt(5, block.getLocation().getBlockY());
-                        deletePs.setInt(6, block.getLocation().getBlockZ());
+                        deletePs.setString(1, block.playerUuid().toString());
+                        deletePs.setString(2, block.groupId());
+                        deletePs.setString(3, block.location().getWorld() != null ? block.location().getWorld().getName() : "");
+                        deletePs.setInt(4, block.location().getBlockX());
+                        deletePs.setInt(5, block.location().getBlockY());
+                        deletePs.setInt(6, block.location().getBlockZ());
                         deletePs.executeUpdate();
                         
-                        recordBlockHistory(player, groupId, block.getMaterial(), block.getLocation(), "REMOVED_INVALID");
+                        recordBlockHistory(player, groupId, block.material(), block.location(), "REMOVED_INVALID");
                     }
                 }
             }
@@ -467,25 +416,7 @@ public class BlockLimiter {
             }
         }
         
-        LOGGER.log(Level.INFO, "Carregados {0} grupos com suas configura\u00e7\u00f5es", blockGroups.size());
-    }
-
-    public static boolean isBlockRegistered(Location location) {
-        String query = "SELECT COUNT(*) as count FROM placed_blocks WHERE world = ? AND x = ? AND y = ? AND z = ?";
-        try (PreparedStatement ps = SQLiteManager.getConnection().prepareStatement(query)) {
-            ps.setString(1, location.getWorld().getName());
-            ps.setInt(2, location.getBlockX());
-            ps.setInt(3, location.getBlockY());
-            ps.setInt(4, location.getBlockZ());
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt("count") > 0;
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Erro ao verificar bloco registrado", e);
-        }
-        return false;
+        LOGGER.log(Level.INFO, "Carregados {0} grupos com suas configurações", blockGroups.size());
     }
 
     private static void removeBlockFromDatabase(Location location) {
@@ -530,10 +461,6 @@ public class BlockLimiter {
             LOGGER.log(Level.SEVERE, "Erro ao verificar bloco registrado", e);
         }
         return null;
-    }
-
-    public static boolean isBlockRegistered(Location location, Material material) {
-        return findRegisteredBlock(location, material) != null;
     }
 
 }

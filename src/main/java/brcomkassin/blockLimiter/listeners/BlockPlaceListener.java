@@ -1,5 +1,6 @@
 package brcomkassin.blockLimiter.listeners;
 
+import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -14,7 +15,7 @@ import brcomkassin.BlockLimiterPlugin;
 import brcomkassin.blockLimiter.limiter.BlockGroup;
 import brcomkassin.blockLimiter.limiter.BlockLimiter;
 import brcomkassin.config.ConfigManager;
-import brcomkassin.utils.Message;
+import brcomkassin.blockLimiter.utils.Message;
 
 public class BlockPlaceListener implements Listener {
     private static final java.util.logging.Logger LOGGER = BlockLimiterPlugin.getInstance().getLogger();
@@ -52,14 +53,14 @@ public class BlockPlaceListener implements Listener {
                             BlockLimiter.recordBlockPlacement(player, material, location);
                             processed.set(true);
                         }
-                    } catch (Exception e) {
+                    } catch (SQLException e) {
                         LOGGER.log(Level.SEVERE, 
                             "Erro ao registrar colocação do bloco para o jogador " + player.getName(), e);
                     }
                 }, delay);
             }
 
-        } catch (Exception e) {
+        } catch (IllegalArgumentException | SQLException e) {
             LOGGER.log(Level.SEVERE, 
                 "Erro ao processar colocação do bloco para o jogador " + player.getName(), e);
             event.setCancelled(true);
